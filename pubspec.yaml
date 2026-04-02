@@ -1,8 +1,8 @@
 name: log_pilot
 description: >
-  Real-time structured logging for Flutter with first-class AI agent support.
-  Box-bordered error formatting, MCP server, DevTools extension, log history,
-  sinks, breadcrumbs, and structured output for LLM workflows.
+  Real-time structured logging for Flutter with AI agent support.
+  MCP server, DevTools extension, log history, sinks, breadcrumbs,
+  and structured output for LLM workflows.
 version: 0.15.0
 homepage: https://github.com/MojtabaTavakkoli/log_pilot
 repository: https://github.com/MojtabaTavakkoli/log_pilot
@@ -14,6 +14,8 @@ topics:
   - developer-tools
   - mcp
 screenshots:
+  - description: 'LogPilot — real-time structured logging for Flutter'
+    path: screenshots/banner.png
   - description: 'Pretty box-bordered console output with metadata'
     path: screenshots/console_pretty.png
   - description: 'In-app log viewer overlay with filters and search'
