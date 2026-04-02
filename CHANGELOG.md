@@ -1,3 +1,16 @@
+## 0.15.1
+
+### Fixed: Package Rename Cleanup
+- Fixed README banner image path (`banner.jpg` → `banner.png`).
+- Shortened `pubspec.yaml` description to comply with pub.dev's 180-character
+  limit (was ~198, now ~156).
+- Added `screenshots/banner.png` as the first screenshot entry so it
+  displays as the package image on pub.dev.
+- Rebuilt DevTools extension (`extension/devtools/build/`) to fix
+  "could not read file as String: index.html" error when opening DevTools.
+
+---
+
 ## 0.15.0
 
 ### Fixed: In-App Overlay Record Detail View
