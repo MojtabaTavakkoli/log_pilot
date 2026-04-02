@@ -1,9 +1,19 @@
+## 0.15.2
+
+### Fixed: pub.dev Package Score
+- Shortened `pubspec.yaml` description to 121 characters (pub.dev requires
+  60–180). Leads with "Flutter logging", "MCP server", "AI agents" for
+  search discoverability.
+- Used `>-` YAML scalar to prevent trailing newline that inflated the
+  published description length.
+- Aligned DevTools extension `config.yaml` version with the package version.
+
+---
+
 ## 0.15.1
 
 ### Fixed: Package Rename Cleanup
 - Fixed README banner image path (`banner.jpg` → `banner.png`).
-- Shortened `pubspec.yaml` description to comply with pub.dev's 180-character
-  limit (was ~198, now ~156).
 - Added `screenshots/banner.png` as the first screenshot entry so it
   displays as the package image on pub.dev.
 - Rebuilt DevTools extension (`extension/devtools/build/`) to fix

@@ -418,7 +418,7 @@ parameter and returns the compressed summary directly to the agent.
 
 ```yaml
 dependencies:
-  log_pilot: ^0.15.0
+  log_pilot: ^0.15.2
 ```
 
 ### Pick Your Setup Level
