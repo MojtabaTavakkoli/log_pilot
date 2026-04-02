@@ -3,7 +3,7 @@ description: >
   Real-time structured logging for Flutter with first-class AI agent support.
   Box-bordered error formatting, MCP server, DevTools extension, log history,
   sinks, breadcrumbs, and structured output for LLM workflows.
-version: 0.15.0
+version: 0.15.1
 homepage: https://github.com/MojtabaTavakkoli/log_pilot
 repository: https://github.com/MojtabaTavakkoli/log_pilot
 issue_tracker: https://github.com/MojtabaTavakkoli/log_pilot/issues
