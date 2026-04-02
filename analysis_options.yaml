@@ -1,0 +1,28 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - log_pilot_devtools/**
+    - log_pilot_mcp/**
+  errors:
+    missing_return: error
+    dead_code: warning
+
+linter:
+  rules:
+    # Optional integration libraries import packages that are intentionally
+    # in dev_dependencies.
+    depend_on_referenced_packages: false
+
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    use_super_parameters: true
+    avoid_print: true
+    cancel_subscriptions: true
+    close_sinks: true
+    unawaited_futures: true
+    unnecessary_lambdas: true

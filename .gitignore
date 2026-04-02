@@ -1,0 +1,44 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter/Dart/Pub related
+# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
+/pubspec.lock
+example/pubspec.lock
+log_pilot_devtools/pubspec.lock
+log_pilot_mcp/pubspec.lock
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+/build/
+/coverage/
+
+# Platform build artifacts (example app)
+example/android/.gradle/
+example/ios/Pods/
+example/ios/.symlinks/
+example/linux/flutter/
+example/macos/Flutter/
+example/windows/flutter/
+
+# DevTools extension build output (keep extension/devtools/build/ for publishing)
+log_pilot_devtools/build/

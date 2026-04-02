@@ -1,0 +1,47 @@
+# Optional integration files — depend on packages that are dev_dependencies.
+# Will be released as separate packages (log_pilot_dio, log_pilot_chopper, etc.).
+
+# Barrel exports
+lib/log_pilot_dio.dart
+lib/log_pilot_chopper.dart
+lib/log_pilot_graphql.dart
+lib/log_pilot_bloc.dart
+
+# Source implementations
+lib/src/network/log_pilot_dio_interceptor.dart
+lib/src/network/log_pilot_chopper_interceptor.dart
+lib/src/network/log_pilot_graphql_link.dart
+lib/src/state/log_pilot_bloc_observer.dart
+
+# Sub-packages (not published with root)
+log_pilot_devtools/
+log_pilot_mcp/
+
+# Research / analysis docs (not useful in published package)
+PACKAGE_ANALYSIS.md
+RELEASE_RESEARCH.md
+REVIEW_VALIDATION_AND_FEATURES.md
+AGENTS.md
+
+# DevTools extension: strip debug symbols and duplicate renderers to reduce size.
+# The extension runs fine with just the default canvaskit build.
+extension/devtools/build/canvaskit/chromium/
+extension/devtools/build/canvaskit/skwasm*
+extension/devtools/build/canvaskit/*.symbols
+extension/devtools/build/.last_build_id
+
+# Build artifacts — keep extension/devtools/build/ for the DevTools extension
+/build/
+
+# CI/CD and project config
+.github/
+.cursor/
+
+# Standard ignores
+.dart_tool/
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+coverage/

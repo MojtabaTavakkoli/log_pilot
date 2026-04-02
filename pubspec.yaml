@@ -1,0 +1,53 @@
+name: log_pilot
+description: >
+  Real-time structured logging for Flutter with first-class AI agent support.
+  Box-bordered error formatting, MCP server, DevTools extension, log history,
+  sinks, breadcrumbs, and structured output for LLM workflows.
+version: 0.15.0
+homepage: https://github.com/MojtabaTavakkoli/log_pilot
+repository: https://github.com/MojtabaTavakkoli/log_pilot
+issue_tracker: https://github.com/MojtabaTavakkoli/log_pilot/issues
+topics:
+  - logging
+  - debug
+  - error-handling
+  - developer-tools
+  - mcp
+screenshots:
+  - description: 'Pretty box-bordered console output with metadata'
+    path: screenshots/console_pretty.png
+  - description: 'In-app log viewer overlay with filters and search'
+    path: screenshots/overlay_list.png
+  - description: 'DevTools extension with real-time log table'
+    path: screenshots/devtools_extension.png
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.16.0
+  http: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  fake_async: ^1.3.2
+
+  # Optional integration packages — only needed for compilation of
+  # log_pilot_dio.dart, log_pilot_chopper.dart, log_pilot_graphql.dart, log_pilot_bloc.dart.
+  # Consumers must add the relevant package to their own pubspec if they
+  # import the corresponding log_pilot barrel (e.g. add `dio` to use
+  # `package:log_pilot/log_pilot_dio.dart`).
+  dio: ^5.8.0+1
+  chopper: ^8.0.3
+  gql: ^1.0.1
+  gql_exec: ^1.1.1-alpha+1699813812660
+  gql_link: ^1.1.0
+  bloc: ^9.2.0
+
+flutter:
+  uses-material-design: true
