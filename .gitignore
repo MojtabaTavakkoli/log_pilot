@@ -19,6 +19,9 @@ migrate_working_dir/
 # VS Code
 .vscode/
 
+# Cursor IDE (MCP config contains session-specific URIs)
+.cursor/
+
 # Flutter/Dart/Pub related
 # Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
 /pubspec.lock
