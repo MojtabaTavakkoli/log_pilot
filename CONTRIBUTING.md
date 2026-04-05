@@ -214,6 +214,34 @@ For breaking changes, add `!` after the type/scope:
 feat(config)!: rename prettyPrint to outputFormat
 ```
 
+### Commit Prefix Labels
+
+For PR titles and quick single-line commits, use bracket prefixes to
+categorize the change at a glance:
+
+| Prefix | When to use |
+|-------------|----------------------------------------------|
+| `[Feature]` | New user-facing functionality |
+| `[Fix]` | Bug fix |
+| `[Docs]` | Documentation only (README, CHANGELOG, etc.) |
+| `[Refactor]`| Code restructuring with no behavior change |
+| `[Test]` | Adding or fixing tests |
+| `[Chore]` | CI, tooling, dependencies, config |
+| `[Perf]` | Performance improvement |
+| `[Breaking]`| Breaking API change |
+
+Examples:
+
+```
+[Docs] Rewrite MCP setup instructions for agents
+[Fix] VM service URI auto-discovery on Windows
+[Feature] Add --project-root flag to MCP server
+[Chore] Bump version to 0.15.3
+```
+
+Both formats are acceptable. Use Conventional Commits for detailed
+commit history and bracket prefixes for PR titles and squash commits.
+
 ### Changelog
 
 Update `CHANGELOG.md` for any user-facing change. Use

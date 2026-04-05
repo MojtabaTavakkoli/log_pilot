@@ -6,15 +6,18 @@ import 'package:log_pilot_mcp/log_pilot_mcp.dart';
 void main(List<String> args) {
   final uri = _parseArg(args, '--vm-service-uri=');
   final uriFile = _parseArg(args, '--vm-service-uri-file=');
+  final projectRoot = _parseArg(args, '--project-root=');
 
   if (uri != null) {
     _startServer(uri, uriFile: uriFile);
     return;
   }
 
-  // Try reading the URI from a file (explicit or default location).
-  final filePath = uriFile ?? _defaultUriFilePath();
+  final filePath = uriFile ?? _defaultUriFilePath(projectRoot: projectRoot);
   if (filePath != null) {
+    io.stderr.writeln(
+      '[log_pilot_mcp] Resolved URI file path: $filePath',
+    );
     final file = io.File(filePath);
     if (file.existsSync()) {
       final discovered = file.readAsStringSync().trim();
@@ -28,16 +31,12 @@ void main(List<String> args) {
     }
   }
 
-  // Check environment variable.
   final envUri = io.Platform.environment['log_pilot_VM_SERVICE_URI'];
   if (envUri != null) {
     _startServer(envUri, uriFile: filePath);
     return;
   }
 
-  // If we have a file path (from auto-discovery) but no URI yet, wait
-  // for the file to appear. This handles the case where the MCP server
-  // starts before the app writes the URI file.
   if (filePath != null) {
     io.stderr.writeln(
       '[log_pilot_mcp] Waiting for VM service URI at $filePath...\n'
@@ -58,6 +57,11 @@ void main(List<String> args) {
     '  --vm-service-uri-file=PATH  Read the URI from this file. The file\n'
     '                              is watched for changes, so the server\n'
     '                              reconnects automatically on app restart.\n'
+    '  --project-root=PATH         Absolute path to the Flutter app\'s\n'
+    '                              project root. Used to locate\n'
+    '                              .dart_tool/log_pilot_vm_service_uri\n'
+    '                              when auto-discovery from cwd fails\n'
+    '                              (common on Windows).\n'
     '\n'
     'Auto-discovery: If no flags are given, the server looks for\n'
     '  .dart_tool/log_pilot_vm_service_uri (written by LogPilot on LogPilot.init()).\n'
@@ -75,7 +79,6 @@ void _startServer(String uri, {String? uriFile}) {
     vmServiceUri: uri,
   );
 
-  // Watch the URI file for changes so we reconnect on full app restarts.
   if (uriFile != null) {
     _watchUriFile(uriFile);
   }
@@ -137,10 +140,28 @@ String? _parseArg(List<String> args, String prefix) {
   return null;
 }
 
-/// Default location for the auto-written URI file. Walks up from the
-/// current directory looking for a `.dart_tool` folder.
-String? _defaultUriFilePath() {
+/// Locate the auto-written URI file. Checks (in order):
+/// 1. The [projectRoot] directory (from `--project-root`), if provided.
+/// 2. The current working directory and up to 5 parent directories.
+///
+/// Returns the path to `.dart_tool/log_pilot_vm_service_uri`, or `null` if
+/// no `.dart_tool` directory can be found.
+String? _defaultUriFilePath({String? projectRoot}) {
+  // --project-root takes priority: look directly in its .dart_tool.
+  if (projectRoot != null) {
+    final explicit = io.File('$projectRoot/.dart_tool/log_pilot_vm_service_uri');
+    final dartTool = io.Directory('$projectRoot/.dart_tool');
+    if (explicit.existsSync()) return explicit.path;
+    if (dartTool.existsSync()) return explicit.path;
+    io.stderr.writeln(
+      '[log_pilot_mcp] --project-root=$projectRoot does not contain '
+      '.dart_tool — falling back to cwd detection.',
+    );
+  }
+
+  // Walk up from cwd looking for the URI file or a .dart_tool directory.
   var dir = io.Directory.current;
+  io.stderr.writeln('[log_pilot_mcp] Searching for .dart_tool from cwd: ${dir.path}');
   for (var i = 0; i < 5; i++) {
     final candidate = io.File('${dir.path}/.dart_tool/log_pilot_vm_service_uri');
     if (candidate.existsSync()) return candidate.path;
@@ -148,10 +169,16 @@ String? _defaultUriFilePath() {
     if (parent.path == dir.path) break;
     dir = parent;
   }
+
   // Fall back to cwd even if file doesn't exist yet (it may appear later).
   final dartTool = io.Directory('${io.Directory.current.path}/.dart_tool');
   if (dartTool.existsSync()) {
     return '${dartTool.path}/log_pilot_vm_service_uri';
   }
+
+  io.stderr.writeln(
+    '[log_pilot_mcp] Could not locate .dart_tool in cwd or parent '
+    'directories. Use --project-root=<APP_PATH> or --vm-service-uri.',
+  );
   return null;
 }

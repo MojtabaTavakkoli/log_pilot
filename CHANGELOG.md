@@ -1,3 +1,35 @@
+## 0.15.3
+
+### Docs: MCP Setup Instructions Rewrite
+- Added prominent callout in both READMEs stating that `log_pilot_mcp` is
+  **not included** in the pub package and must be cloned from the GitHub
+  repo separately.
+- Added copy-pasteable `git clone` command and `dart pub get` steps to
+  the "For AI Agents" section and the MCP server README.
+- Replaced ambiguous `/absolute/path/to/log_pilot` placeholders with
+  `<ABSOLUTE_PATH_TO_LOG_PILOT_REPO>` with platform-specific examples.
+- Promoted `--vm-service-uri` from a troubleshooting footnote to a
+  primary fallback path with copy-pasteable `mcp.json` examples.
+
+### Fixed: VM Service URI Auto-Discovery on Windows
+- `writeVmServiceUri()` now tries three strategies to locate `.dart_tool`:
+  cwd walk, `Platform.script` parent walk, and `Platform.resolvedExecutable`
+  parent walk. Previously only cwd was checked, which fails on Windows
+  where IDEs often set cwd to the Flutter SDK or system directory.
+- Walk depth increased from 6 to 9 parent directories.
+- Failures now log a diagnostic `debugPrint` message instead of being
+  silently swallowed, so developers can see why auto-discovery failed.
+
+### Added: `--project-root` Flag for MCP Server
+- The `log_pilot_mcp` server accepts a new `--project-root=PATH` argument
+  to explicitly specify the Flutter app's project root. This lets the
+  server locate `.dart_tool/log_pilot_vm_service_uri` when cwd-based
+  auto-discovery fails.
+- The server now logs the resolved URI file path and search directory to
+  stderr for easier debugging.
+
+---
+
 ## 0.15.2
 
 ### Fixed: pub.dev Package Score
