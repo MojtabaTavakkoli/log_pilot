@@ -108,31 +108,89 @@ If the LogPilot MCP server is configured, you can call these tools directly:
 
 ### Setting Up the MCP Server
 
-If the LogPilot MCP server is **not yet configured** in this project, follow
-these steps to enable it. **Do not skip step 3** — the server defaults to
-disabled and you will loop endlessly if you only reload the window.
+> **You MUST complete ALL steps below.** The MCP server will not appear in
+> your tool list until the developer finishes step 4. Do not skip ahead —
+> you cannot use LogPilot MCP tools until setup is fully done.
 
-1. Run `dart pub get` in the `log_pilot_mcp/` directory (once).
-2. Create `.cursor/mcp.json` in the project root:
+> **Important:** The `log_pilot_mcp` server is **not included** in the
+> `log_pilot` pub package. It lives in the
+> [log_pilot GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot)
+> and must be cloned separately. Running `flutter pub add log_pilot` does
+> **not** put `log_pilot_mcp/` on disk.
+
+**Steps 1–3 are actions YOU (the agent) perform. Step 4 requires the
+developer — you must ask them and wait.**
+
+1. **Clone the repo** (if `log_pilot_mcp/` is not already on disk):
+   ```bash
+   git clone https://github.com/MojtabaTavakkoli/log_pilot.git
+   ```
+2. **Install MCP server dependencies** (once):
+   ```bash
+   cd log_pilot/log_pilot_mcp && dart pub get
+   ```
+3. **Create or update `.cursor/mcp.json`** in the **workspace root** (the
+   folder open in Cursor). If the file already exists, merge the `LogPilot`
+   entry into the existing `mcpServers` object — do not overwrite other
+   servers.
+
+   The app **must be running in debug mode** before the MCP server can
+   connect. Run `flutter run` first, then copy the `ws://...` URI printed
+   in the debug console (the line that says
+   `Debug service listening on ws://...`). Use that URI in the
+   `--vm-service-uri` argument:
+
+   **Windows example:**
    ```json
    {
      "mcpServers": {
        "LogPilot": {
          "command": "dart",
-         "args": ["run", "/absolute/path/to/log_pilot/log_pilot_mcp/bin/log_pilot_mcp.dart"]
+         "args": [
+           "run",
+           "D:\\FlutterApps\\log_pilot\\log_pilot_mcp\\bin\\log_pilot_mcp.dart",
+           "--vm-service-uri=ws://127.0.0.1:62542/0L3A7jm1D0Y=/ws"
+         ]
        }
      }
    }
    ```
-3. **Ask the developer** to:
-   - Press `Ctrl+Shift+P` → "Developer: Reload Window"
-   - Open **Cursor Settings → MCP**
-   - **Toggle the LogPilot server ON** (it defaults to disabled)
-   - Verify the green dot appears
 
-The server auto-discovers the running app's VM service URI from
-`.dart_tool/log_pilot_vm_service_uri` — no manual URI needed. It reconnects
-automatically on hot restart and full restart.
+   **macOS / Linux example:**
+   ```json
+   {
+     "mcpServers": {
+       "LogPilot": {
+         "command": "dart",
+         "args": [
+           "run",
+           "/Users/you/projects/log_pilot/log_pilot_mcp/bin/log_pilot_mcp.dart",
+           "--vm-service-uri=ws://127.0.0.1:62542/0L3A7jm1D0Y=/ws"
+         ]
+       }
+     }
+   }
+   ```
+
+   Replace the path with the **absolute path** to where you cloned the
+   repo, and replace the `ws://...` URI with the one from your debug
+   console.
+
+   > **Note:** On native platforms (Windows, macOS, Linux, Android, iOS)
+   > you may omit `--vm-service-uri` — LogPilot auto-writes the URI to
+   > `.dart_tool/log_pilot_vm_service_uri` and the MCP server discovers it
+   > automatically. On **Flutter Web (Chrome)** auto-discovery does not
+   > work, so `--vm-service-uri` is required.
+
+4. **Ask the developer** to open **Cursor Settings → MCP** and **toggle
+   the LogPilot server ON**. New MCP servers default to disabled — the
+   developer must enable it manually. Once toggled on, verify the green
+   dot appears. If the server does not appear in the list at all, ask the
+   developer to press `Ctrl+Shift+P` → "Developer: Reload Window" first.
+
+**After the developer confirms the server is enabled**, you will see
+LogPilot MCP tools (`get_snapshot`, `query_logs`, etc.) in your available
+tools. Call `get_snapshot` to verify the connection is working.
 
 ### Rules for Agents
 
@@ -225,43 +283,55 @@ Protocol.
 
 ### Setup (Step-by-Step)
 
-**Step 1 — Install MCP server dependencies** (once):
+> **Important:** `log_pilot_mcp` is **not included** in the `log_pilot` pub
+> package. It lives in the
+> [log_pilot GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot)
+> and must be cloned separately.
+
+**Step 1 — Clone the repo** (skip if you already have it):
 
 ```bash
-cd path/to/log_pilot/log_pilot_mcp
+git clone https://github.com/MojtabaTavakkoli/log_pilot.git
+```
+
+**Step 2 — Install MCP server dependencies** (once):
+
+```bash
+cd log_pilot/log_pilot_mcp
 dart pub get
 ```
 
-**Step 2 — Create `.cursor/mcp.json`** in your **app's project root**:
+**Step 3 — Create `.cursor/mcp.json`** in your **app's project root**:
 
 ```json
 {
   "mcpServers": {
     "LogPilot": {
       "command": "dart",
-      "args": ["run", "/absolute/path/to/log_pilot/log_pilot_mcp/bin/log_pilot_mcp.dart"]
+      "args": ["run", "<ABSOLUTE_PATH_TO_LOG_PILOT_REPO>/log_pilot_mcp/bin/log_pilot_mcp.dart"]
     }
   }
 }
 ```
 
-Use the **absolute path** to the script — Cursor does not reliably honor
-`cwd` for project-level MCP servers.
+Replace `<ABSOLUTE_PATH_TO_LOG_PILOT_REPO>` with the absolute path where you
+cloned the repo. Use the **absolute path** to the script — Cursor does not
+reliably honor `cwd` for project-level MCP servers.
 
-**Step 3 — Reload and enable:**
+**Step 4 — Enable the server:**
 
-1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
-2. Run **"Developer: Reload Window"**
-3. Open **Cursor Settings → MCP**
-4. Find `LogPilot` in the list and **toggle it ON**
-5. Verify it shows a green dot (connected)
+1. Open **Cursor Settings → MCP**
+2. Find `LogPilot` in the list and **toggle it ON**
+3. Verify it shows a green dot (connected)
 
 > **Important:** After creating `mcp.json`, the server appears **disabled
 > by default**. You must manually enable the toggle in Cursor Settings →
-> MCP. Skipping this step causes agents to loop endlessly reloading the
-> IDE trying to find the server.
+> MCP. Skipping this step causes agents to loop endlessly trying to find
+> the server. If the server does not appear in the list, press
+> `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) → "Developer: Reload
+> Window" first.
 
-**Step 4 — Start your Flutter app** in debug mode:
+**Step 5 — Start your Flutter app** in debug mode:
 
 ```bash
 flutter run
@@ -285,9 +355,18 @@ mode. The MCP server:
 - On full restart: URI changes, file updates, server detects the change and
   reconnects within the watch interval
 
-**No manual URI copying is needed** in the normal workflow. The only time
-you need to pass `--vm-service-uri` manually is when auto-discovery fails
-(e.g., the `.dart_tool` folder is not in the expected location).
+**No manual URI copying is needed** in the normal workflow.
+
+**If auto-discovery fails** (e.g., `.dart_tool` is not in the expected
+location, or the app's working directory differs from the project root on
+Windows), you have two fallback options:
+
+1. **Pass the URI manually** — copy the `ws://...` URI from the Flutter
+   debug console and add `--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws`
+   to the `args` array in `mcp.json`.
+2. **Pass the project root** — add
+   `--project-root=<ABSOLUTE_PATH_TO_YOUR_APP>` to the `args` array so the
+   server knows where to find `.dart_tool/log_pilot_vm_service_uri`.
 
 ### What Agents Can Do
 
@@ -320,7 +399,7 @@ you need to pass `--vm-service-uri` manually is when auto-discovery fails
 ### Claude Code / Terminal Usage
 
 ```bash
-cd path/to/log_pilot/log_pilot_mcp
+cd <ABSOLUTE_PATH_TO_LOG_PILOT_REPO>/log_pilot_mcp
 dart run log_pilot_mcp --vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws
 ```
 
@@ -332,8 +411,9 @@ Or use the `log_pilot_VM_SERVICE_URI` environment variable.
 |---------|----------|
 | Server shows "Disabled" in Cursor Settings → MCP | Toggle the switch **ON** manually. New servers default to disabled. |
 | Server not appearing in MCP settings | Reload the Cursor window after creating/editing `mcp.json`. |
-| `Could not find package "log_pilot_mcp"` | Use the absolute path to `log_pilot_mcp/bin/log_pilot_mcp.dart`, not `dart run log_pilot_mcp`. |
+| `Could not find package "log_pilot_mcp"` | `log_pilot_mcp` is not on pub — clone the [GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot) and use the absolute path to `log_pilot_mcp/bin/log_pilot_mcp.dart`. |
 | `Failed to connect to VM service` | App isn't running in debug mode, or the URI is stale. Start the app first. |
+| Auto-discovery file not created | On Windows, the app's working directory may not match the project root. Pass `--project-root=<APP_PATH>` or use `--vm-service-uri` manually. |
 | Tools fail after hot restart | Auto-recovers on the next call. If it persists, the VM port changed (full restart) — the URI file watcher handles this. |
 | Server connects but tools return errors | The app must `import 'package:log_pilot/log_pilot.dart'` so the library is loaded. |
 
@@ -418,7 +498,7 @@ parameter and returns the compressed summary directly to the agent.
 
 ```yaml
 dependencies:
-  log_pilot: ^0.15.2
+  log_pilot: ^0.15.3
 ```
 
 ### Pick Your Setup Level
