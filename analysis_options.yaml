@@ -3,7 +3,6 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - log_pilot_devtools/**
-    - log_pilot_mcp/**
   errors:
     missing_return: error
     dead_code: warning

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'release/**']
 
 jobs:
   analyze-and-test:
@@ -43,24 +43,6 @@ jobs:
       - name: Analyze
         working-directory: log_pilot_devtools
         run: flutter analyze --no-fatal-infos
-
-  analyze-mcp:
-    name: Analyze log_pilot_mcp
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
-
-      - name: Install dependencies
-        working-directory: log_pilot_mcp
-        run: dart pub get
-
-      - name: Analyze
-        working-directory: log_pilot_mcp
-        run: dart analyze
 
   dry-run:
     name: Pub Dry Run

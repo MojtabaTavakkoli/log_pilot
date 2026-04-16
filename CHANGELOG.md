@@ -1,3 +1,84 @@
+## 1.0.0-beta.1
+
+First beta toward the stable 1.0 release.
+
+### Changed
+- Version bumped to `1.0.0-beta.1` across `pubspec.yaml`, DevTools
+  extension config, and README.
+
+### Docs
+- **CONTRIBUTING.md:** Added release/beta branching strategy with naming
+  conventions and dev-branch workflow.
+
+---
+
+## 0.15.5
+
+### Fixed: Service Extension Re-Registration in Tests
+- `LogPilot.reset()` no longer resets the `_extensionsRegistered` flag.
+  Dart VM service extensions persist for the VM lifetime and cannot be
+  unregistered — resetting the flag caused "Extension already registered"
+  errors in test suites that call `configure()`/`reset()` across multiple
+  tests in the same file.
+
+### Docs: README Cleanup
+- Added "Features at a Glance" and "Migrating from plog" to the Table of
+  Contents — previously missing, making both sections hard to discover.
+- Fixed Web Platform section listing BLoC observer without qualifying it as
+  repo-only — now includes a cross-reference to Package Imports.
+- Fixed self-diagnostics description: "raised to warning" now explicitly says
+  "reducing verbosity" to avoid misreading "raised" as "more verbose."
+- Fixed Step 4 wording: "both steps" → "all three steps" to match the actual
+  checklist count.
+- Fixed MCP architecture diagram alignment.
+- Added horizontal rule between Contributing and License sections.
+
+---
+
+## 0.15.4
+
+### Changed: MCP Server Extracted to Standalone Package
+- The `log_pilot_mcp` MCP server is now a **standalone package** published
+  separately at [`log_pilot_mcp`](https://github.com/MojtabaTavakkoli/log_pilot_mcp).
+- **New setup:** `dart pub add --dev log_pilot_mcp` — no cloning, no absolute
+  paths, no Flutter dependency. The MCP server is a pure Dart CLI tool.
+- Updated all documentation (README, CONTRIBUTING, agent setup sections) to
+  reference the standalone package instead of the repo subfolder.
+- The legacy `log_pilot_mcp/` subfolder has been removed from this repo.
+
+### Fixed: Uncaught `AssertionError` Zone Level
+- Uncaught `AssertionError` exceptions in the error zone are now logged at
+  `error` level instead of `warning`. These are genuine uncaught exceptions
+  (e.g. Flutter's `RenderBox` layout assertions) and the previous `warning`
+  severity was understated.
+
+### Docs: Prominent Warnings for Repo-Only Imports
+- Added visible callout banners to the BLoC Observer and Network Logging
+  sections warning that `log_pilot_bloc.dart`, `log_pilot_dio.dart`,
+  `log_pilot_chopper.dart`, and `log_pilot_graphql.dart` are **not included**
+  in the pub.dev package. Previously only a footnote in the Package Imports
+  table mentioned this — users following the README hit compile errors.
+- Documented `const LogPilotLogger('Tag')` as the compile-time constant
+  alternative to `LogPilot.create('Tag')` in the Scoped Loggers section.
+
+### Improved: `query_logs` MCP Tool — Rich Filtering
+- `query_logs` now exposes the full power of `LogPilot.historyWhere` via MCP:
+  `message_contains`, `trace_id`, `has_error`, and `metadata_key` filters,
+  in addition to the existing `level`, `tag`, `limit`, and `deduplicate`.
+- All filters combine with AND logic.
+
+### Added: Example App MCP Integration
+- Added `log_pilot_mcp` as a dev dependency in the example app.
+- Added `.cursor/mcp.json` to the example with a working auto-discovery config.
+- Updated example README with MCP setup instructions.
+
+### Docs: Simplified MCP Setup
+- Human setup reduced from 5 steps to 4 — install with `dart pub add`.
+- MCP config simplified to `["run", "log_pilot_mcp"]` — no absolute paths.
+- Troubleshooting table updated with new installation guidance.
+
+---
+
 ## 0.15.3
 
 ### Docs: MCP Setup Instructions Rewrite

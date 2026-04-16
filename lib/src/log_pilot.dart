@@ -40,6 +40,7 @@ abstract final class LogPilot {
     required Widget child,
   }) {
     LogPilotZone.snapshotBuilder = snapshot;
+    LogPilotZone.exportForLLMBuilder = exportForLLM;
     LogPilotZone.init(config: config, onError: onError, child: child);
   }
 
@@ -61,6 +62,7 @@ abstract final class LogPilot {
   /// defaults in debug mode.
   static void configure({LogPilotConfig? config}) {
     LogPilotZone.snapshotBuilder = snapshot;
+    LogPilotZone.exportForLLMBuilder = exportForLLM;
     LogPilotZone.configure(config: config);
   }
 

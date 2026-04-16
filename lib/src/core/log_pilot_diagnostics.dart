@@ -51,8 +51,8 @@ class LogPilotDiagnostics {
   LogLevel? _originalLevel;
   bool _degraded = false;
 
-  /// Start monitoring. Installs a lightweight [LogSink] that counts
-  /// records and measures sink dispatch time.
+  /// Start monitoring. Begins periodic throughput sampling via
+  /// [recordDispatch] calls from the sink pipeline.
   void start() {
     _timer?.cancel();
     _timer = Timer.periodic(windowDuration, _onWindow);

@@ -64,7 +64,7 @@ Every method accepts optional `error`, `stackTrace`, `metadata` (Map), and
 
 ```dart
 class AuthService {
-  static final _log = LogPilot.create('AuthService');
+  static const _log = LogPilotLogger('AuthService');
 
   Future<void> signIn(String email) async {
     _log.info('Attempting sign in', metadata: {'email': email});
@@ -97,7 +97,7 @@ If the LogPilot MCP server is configured, you can call these tools directly:
 | MCP Tool | What it does |
 |----------|--------------|
 | `get_snapshot` | Session ID, config, error counts, recent logs, active timers |
-| `query_logs` | Filter by level/tag/limit with optional deduplication |
+| `query_logs` | Filter by level, tag, message, trace ID, error presence, metadata key |
 | `export_logs` | Full history as text or NDJSON |
 | `export_for_llm` | Compressed summary optimized for your context window |
 | `set_log_level` | Change verbosity at runtime without restart |
@@ -112,81 +112,44 @@ If the LogPilot MCP server is configured, you can call these tools directly:
 > your tool list until the developer finishes step 4. Do not skip ahead —
 > you cannot use LogPilot MCP tools until setup is fully done.
 
-> **Important:** The `log_pilot_mcp` server is **not included** in the
-> `log_pilot` pub package. It lives in the
-> [log_pilot GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot)
-> and must be cloned separately. Running `flutter pub add log_pilot` does
-> **not** put `log_pilot_mcp/` on disk.
-
 **Steps 1–3 are actions YOU (the agent) perform. Step 4 requires the
 developer — you must ask them and wait.**
 
-1. **Clone the repo** (if `log_pilot_mcp/` is not already on disk):
+1. **Install the MCP server** as a dev dependency in the app:
    ```bash
-   git clone https://github.com/MojtabaTavakkoli/log_pilot.git
+   dart pub add --dev log_pilot_mcp
    ```
-2. **Install MCP server dependencies** (once):
-   ```bash
-   cd log_pilot/log_pilot_mcp && dart pub get
-   ```
+2. **Ensure the Flutter app is running in debug mode.** Auto-discovery
+   requires the app to be running so it can write the VM service URI.
+   If the app is not running, ask the developer to run `flutter run` first.
+
 3. **Create or update `.cursor/mcp.json`** in the **workspace root** (the
    folder open in Cursor). If the file already exists, merge the `LogPilot`
    entry into the existing `mcpServers` object — do not overwrite other
    servers.
 
-   The app **must be running in debug mode** before the MCP server can
-   connect. Run `flutter run` first, then copy the `ws://...` URI printed
-   in the debug console (the line that says
-   `Debug service listening on ws://...`). Use that URI in the
-   `--vm-service-uri` argument:
-
-   **Windows example:**
    ```json
    {
      "mcpServers": {
        "LogPilot": {
          "command": "dart",
-         "args": [
-           "run",
-           "D:\\FlutterApps\\log_pilot\\log_pilot_mcp\\bin\\log_pilot_mcp.dart",
-           "--vm-service-uri=ws://127.0.0.1:62542/0L3A7jm1D0Y=/ws"
-         ]
+         "args": ["run", "log_pilot_mcp"]
        }
      }
    }
    ```
 
-   **macOS / Linux example:**
-   ```json
-   {
-     "mcpServers": {
-       "LogPilot": {
-         "command": "dart",
-         "args": [
-           "run",
-           "/Users/you/projects/log_pilot/log_pilot_mcp/bin/log_pilot_mcp.dart",
-           "--vm-service-uri=ws://127.0.0.1:62542/0L3A7jm1D0Y=/ws"
-         ]
-       }
-     }
-   }
-   ```
+   > **Flutter Web only:** Auto-discovery does not work (no `dart:io`).
+   > Add `"--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws"` to the `args`
+   > array, using the URI from the debug console.
 
-   Replace the path with the **absolute path** to where you cloned the
-   repo, and replace the `ws://...` URI with the one from your debug
-   console.
-
-   > **Note:** On native platforms (Windows, macOS, Linux, Android, iOS)
-   > you may omit `--vm-service-uri` — LogPilot auto-writes the URI to
-   > `.dart_tool/log_pilot_vm_service_uri` and the MCP server discovers it
-   > automatically. On **Flutter Web (Chrome)** auto-discovery does not
-   > work, so `--vm-service-uri` is required.
-
-4. **Ask the developer** to open **Cursor Settings → MCP** and **toggle
-   the LogPilot server ON**. New MCP servers default to disabled — the
-   developer must enable it manually. Once toggled on, verify the green
-   dot appears. If the server does not appear in the list at all, ask the
-   developer to press `Ctrl+Shift+P` → "Developer: Reload Window" first.
+4. **Ask the developer to enable the server.** This is a **two-step manual
+   process** that the developer must do in Cursor:
+   - Press `Ctrl+Shift+P` → **"Developer: Reload Window"** (so Cursor
+     picks up the new `mcp.json`)
+   - Open **Cursor Settings → MCP** and **toggle the LogPilot server ON**
+     (new servers default to OFF)
+   - Verify a green dot appears next to LogPilot
 
 **After the developer confirms the server is enabled**, you will see
 LogPilot MCP tools (`get_snapshot`, `query_logs`, etc.) in your available
@@ -197,7 +160,7 @@ tools. Call `get_snapshot` to verify the connection is working.
 - Always pass `error` + `stackTrace` to error/fatal calls.
 - Use `tag:` for every domain (`Auth`, `Cart`, `API`, `DB`, `Nav`, etc.).
 - Prefer `metadata:` maps over string interpolation.
-- Use `LogPilot.create('Tag')` in classes for automatic tagging.
+- Use `const LogPilotLogger('Tag')` in classes for automatic tagging.
 - Never silence errors with empty catch blocks — log them.
 
 Copy this block into `.cursor/rules/`, `AGENTS.md`, `GEMINI.md`, or
@@ -243,32 +206,36 @@ Copy this block into `.cursor/rules/`, `AGENTS.md`, `GEMINI.md`, or
 - [Configuration Reference](#configuration-reference)
 - [Package Imports](#package-imports)
 - [Example App](#example-app)
+- [Features at a Glance](#features-at-a-glance)
 - [Contributing](#contributing)
 - [License](#license)
+- [Migrating from plog](#migrating-from-plog)
 
 ---
 
 ## MCP Server
 
-The `log_pilot_mcp` package is a standalone MCP server that gives AI coding
-agents live, bidirectional access to your running Flutter app's logs. No
-terminal scraping — the agent calls structured tools over the Model Context
-Protocol.
+The [`log_pilot_mcp`](https://github.com/MojtabaTavakkoli/log_pilot_mcp)
+package is a standalone MCP server that gives AI coding agents live,
+bidirectional access to your running Flutter app's logs. No terminal
+scraping — the agent calls structured tools over the Model Context Protocol.
+Install it as a dev dependency: `dart pub add --dev log_pilot_mcp`.
 
 ### How It Works
 
 ```
-┌──────────────┐     ext.LogPilot.*     ┌─────────────────┐
-│  Flutter App  │◄── VM Service ──────►│  log_pilot_mcp     │
-│  (debug mode) │    extensions       │  (MCP server)    │
-└──────┬───────┘                      └────────┬────────┘
-       │                                       │ MCP protocol
-       │ writes URI on start                   │
-       ▼                                       │
-  .dart_tool/                         ┌────────▼────────┐
-  log_pilot_vm_service_uri              │  Cursor / Claude  │
-       │                              │  / Windsurf / ... │
-       └── watched by MCP server ─────└─────────────────┘
++----------------+                    +------------------+
+|  Flutter App   | -- VM Service ---> |  log_pilot_mcp   |
+|  (debug mode)  | <-- ext.LogPilot.* |  (MCP server)    |
++-------+--------+                    +---------+--------+
+        |                                       |
+        | writes URI                            | MCP protocol
+        | on start                              |
+        v                                       v
+  .dart_tool/                          +------------------+
+  log_pilot_vm_service_uri             | Cursor / Claude  |
+        |                              | Windsurf / ...   |
+        +--- watched by MCP server --->+------------------+
 ```
 
 1. When your Flutter app starts in debug mode, `LogPilot.init()` registers
@@ -283,23 +250,22 @@ Protocol.
 
 ### Setup (Step-by-Step)
 
-> **Important:** `log_pilot_mcp` is **not included** in the `log_pilot` pub
-> package. It lives in the
-> [log_pilot GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot)
-> and must be cloned separately.
-
-**Step 1 — Clone the repo** (skip if you already have it):
+**Step 1 — Install the MCP server** as a dev dependency:
 
 ```bash
-git clone https://github.com/MojtabaTavakkoli/log_pilot.git
+dart pub add --dev log_pilot_mcp
 ```
 
-**Step 2 — Install MCP server dependencies** (once):
+This adds the package and runs `dart pub get` automatically.
+
+**Step 2 — Start your Flutter app** in debug mode:
 
 ```bash
-cd log_pilot/log_pilot_mcp
-dart pub get
+flutter run
 ```
+
+LogPilot writes the VM service URI to
+`.dart_tool/log_pilot_vm_service_uri` automatically on native platforms.
 
 **Step 3 — Create `.cursor/mcp.json`** in your **app's project root**:
 
@@ -308,37 +274,27 @@ dart pub get
   "mcpServers": {
     "LogPilot": {
       "command": "dart",
-      "args": ["run", "<ABSOLUTE_PATH_TO_LOG_PILOT_REPO>/log_pilot_mcp/bin/log_pilot_mcp.dart"]
+      "args": ["run", "log_pilot_mcp"]
     }
   }
 }
 ```
 
-Replace `<ABSOLUTE_PATH_TO_LOG_PILOT_REPO>` with the absolute path where you
-cloned the repo. Use the **absolute path** to the script — Cursor does not
-reliably honor `cwd` for project-level MCP servers.
+> **Flutter Web:** Auto-discovery is not available (no `dart:io`). Copy the
+> `ws://...` URI from the debug console and add
+> `"--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws"` to the `args` array.
 
-**Step 4 — Enable the server:**
+**Step 4 — Enable the server in Cursor:**
 
-1. Open **Cursor Settings → MCP**
-2. Find `LogPilot` in the list and **toggle it ON**
+> **You MUST complete all three steps — the server will NOT work otherwise.**
+
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) → **"Developer: Reload
+   Window"** to pick up the new `mcp.json`
+2. Open **Cursor Settings → MCP**, find `LogPilot`, and **toggle it ON**
+   (new servers default to OFF)
 3. Verify it shows a green dot (connected)
 
-> **Important:** After creating `mcp.json`, the server appears **disabled
-> by default**. You must manually enable the toggle in Cursor Settings →
-> MCP. Skipping this step causes agents to loop endlessly trying to find
-> the server. If the server does not appear in the list, press
-> `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) → "Developer: Reload
-> Window" first.
-
-**Step 5 — Start your Flutter app** in debug mode:
-
-```bash
-flutter run
-```
-
-LogPilot writes the VM service URI automatically. The MCP server picks it up
-and connects. Verify by asking your agent to call `get_snapshot`.
+Verify by asking your agent to call `get_snapshot`.
 
 ### Auto-Discovery
 
@@ -355,25 +311,31 @@ mode. The MCP server:
 - On full restart: URI changes, file updates, server detects the change and
   reconnects within the watch interval
 
-**No manual URI copying is needed** in the normal workflow.
+**No manual URI copying is needed** in the normal native workflow.
 
-**If auto-discovery fails** (e.g., `.dart_tool` is not in the expected
-location, or the app's working directory differs from the project root on
-Windows), you have two fallback options:
+**Flutter Web:** Auto-discovery does not work on web (no `dart:io`). You
+must pass the URI manually — see the
+[`log_pilot_mcp` Flutter Web docs](https://github.com/MojtabaTavakkoli/log_pilot_mcp#flutter-web)
+for platform-specific helper scripts (bash + PowerShell) that capture the
+URI on each restart.
 
-1. **Pass the URI manually** — copy the `ws://...` URI from the Flutter
-   debug console and add `--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws`
-   to the `args` array in `mcp.json`.
-2. **Pass the project root** — add
+**If auto-discovery fails on native** (e.g., `.dart_tool` is not in the
+expected location, or the app's working directory differs from the project
+root on Windows), you have two fallback options:
+
+1. **Pass the project root** — add
    `--project-root=<ABSOLUTE_PATH_TO_YOUR_APP>` to the `args` array so the
    server knows where to find `.dart_tool/log_pilot_vm_service_uri`.
+2. **Pass the URI manually** — copy the `ws://...` URI from the Flutter
+   debug console and add `--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws`
+   to the `args` array in `mcp.json`.
 
 ### What Agents Can Do
 
 | Tool | What it does |
 |------|--------------|
 | `get_snapshot` | Structured summary: session ID, config, history counts, recent errors, active timers. Supports `group_by_tag` for per-tag breakdown. |
-| `query_logs` | Filter by level, tag, limit. `deduplicate: true` collapses repeated entries while preserving different call sites. |
+| `query_logs` | Filter by level, tag, message text, trace ID, error presence, metadata key. `deduplicate: true` collapses repeated entries while preserving different call sites. |
 | `export_logs` | Full history as human-readable text or NDJSON. |
 | `export_for_llm` | Compressed summary optimized for LLM context windows — prioritizes errors, deduplicates, truncates verbose entries. |
 | `set_log_level` / `get_log_level` | Change or read verbosity at runtime. Crank to `verbose` for debugging, back to `warning` when done. |
@@ -399,7 +361,6 @@ Windows), you have two fallback options:
 ### Claude Code / Terminal Usage
 
 ```bash
-cd <ABSOLUTE_PATH_TO_LOG_PILOT_REPO>/log_pilot_mcp
 dart run log_pilot_mcp --vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws
 ```
 
@@ -411,7 +372,7 @@ Or use the `log_pilot_VM_SERVICE_URI` environment variable.
 |---------|----------|
 | Server shows "Disabled" in Cursor Settings → MCP | Toggle the switch **ON** manually. New servers default to disabled. |
 | Server not appearing in MCP settings | Reload the Cursor window after creating/editing `mcp.json`. |
-| `Could not find package "log_pilot_mcp"` | `log_pilot_mcp` is not on pub — clone the [GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot) and use the absolute path to `log_pilot_mcp/bin/log_pilot_mcp.dart`. |
+| `Could not find package "log_pilot_mcp"` | Run `dart pub add --dev log_pilot_mcp` in your app's directory first. |
 | `Failed to connect to VM service` | App isn't running in debug mode, or the URI is stale. Start the app first. |
 | Auto-discovery file not created | On Windows, the app's working directory may not match the project root. Pass `--project-root=<APP_PATH>` or use `--vm-service-uri` manually. |
 | Tools fail after hot restart | Auto-recovers on the next call. If it persists, the VM port changed (full restart) — the URI file watcher handles this. |
@@ -419,7 +380,7 @@ Or use the `log_pilot_VM_SERVICE_URI` environment variable.
 
 For the complete reference (manual URI, platform examples, `watch_logs`
 parameters, `get_snapshot` parameters), see
-[`log_pilot_mcp/README.md`](log_pilot_mcp/README.md).
+[`log_pilot_mcp` on GitHub](https://github.com/MojtabaTavakkoli/log_pilot_mcp).
 
 ---
 
@@ -498,24 +459,29 @@ parameter and returns the compressed summary directly to the agent.
 
 ```yaml
 dependencies:
-  log_pilot: ^0.15.3
+  log_pilot: ^1.0.0-beta.1
 ```
 
 ### Pick Your Setup Level
 
 **Full setup** — error zones + logging (recommended):
 
+> **`LogPilot.init()` calls `runApp()` internally — do NOT call `runApp()`
+> yourself.** Writing both `LogPilot.init(child: MyApp())` and
+> `runApp(MyApp())` will produce confusing double-initialization bugs.
+
 ```dart
 import 'package:flutter/material.dart';
 import 'package:log_pilot/log_pilot.dart';
 
 void main() {
+  // This replaces runApp() — do not call runApp() separately!
   LogPilot.init(child: const MyApp());
 }
 ```
 
-`LogPilot.init()` replaces `runApp()` and auto-catches every Flutter error,
-platform error, and uncaught zone exception.
+This auto-catches every Flutter error, platform error, and uncaught zone
+exception.
 
 **Config only** — you call `runApp()` yourself:
 
@@ -531,6 +497,11 @@ void main() {
 ```dart
 LogPilot.info('Hello world'); // no init needed in debug mode
 ```
+
+> **Note:** Zero setup only provides basic console logging. Service
+> extensions (required for DevTools integration and MCP tools), error
+> zones, and breadcrumbs require `LogPilot.init()` or
+> `LogPilot.configure()`.
 
 ---
 
@@ -598,7 +569,9 @@ tagged:
 
 ```dart
 class AuthService {
-  static final _log = LogPilot.create('AuthService');
+  // LogPilotLogger has a const constructor for compile-time constant loggers:
+  static const _log = LogPilotLogger('AuthService');
+  // Or use the convenience factory: LogPilot.create('AuthService')
 
   Future<void> signIn(String email) async {
     _log.info('Attempting sign in', metadata: {'email': email});
@@ -658,11 +631,13 @@ Query network errors from history:
 final httpErrors = LogPilot.historyWhere(tag: 'http', hasError: true);
 ```
 
-> **Dio, Chopper, GraphQL, and BLoC integrations** are available in the
-> [source repo](https://github.com/MojtabaTavakkoli/log_pilot) but are **not
-> included in the published package** yet. They will ship as separate
-> packages in a future release. In the meantime you can copy the source file
-> from the repo into your project.
+> **Dio, Chopper, GraphQL, and BLoC integrations will fail to import** if
+> you installed from pub.dev. These barrels are `.pubignore`d and only
+> exist in the [source repo](https://github.com/MojtabaTavakkoli/log_pilot).
+>
+> **To use them now:** copy the source file from the repo into your project
+> (e.g. `lib/src/network/log_pilot_dio_interceptor.dart`). Standalone
+> packages (`log_pilot_dio`, `log_pilot_bloc`, etc.) are planned.
 
 ---
 
@@ -700,6 +675,12 @@ class RemoteSink implements LogSink {
 
 ### Choosing the Right Sink
 
+> **Warning:** `CallbackSink` fires **synchronously** inside the log
+> dispatch pipeline. If your callback updates a `ValueNotifier` or calls
+> `setState()`, you will crash with "setState() during build." Use
+> `BufferedCallbackSink` for UI state or wrap your callback in
+> `scheduleMicrotask()`.
+
 | Sink | Delivery | Best for |
 |------|----------|----------|
 | `CallbackSink` | Synchronous, per-record | Fire-and-forget: crash reporters, analytics |
@@ -734,24 +715,21 @@ import 'dart:io';
 import 'package:log_pilot/log_pilot.dart';
 import 'package:log_pilot/log_pilot_io.dart';
 
+final fileSink = FileSink(
+  directory: Directory('/path/to/logs'),
+  maxFileSize: 2 * 1024 * 1024,  // 2 MB per file
+  maxFileCount: 5,
+  format: FileLogFormat.text,     // or .json for NDJSON
+  baseFileName: 'LogPilot',
+);
+
 LogPilot.init(
-  config: LogPilotConfig(
-    sinks: [
-      FileSink(
-        directory: Directory('/path/to/logs'),
-        maxFileSize: 2 * 1024 * 1024,  // 2 MB per file
-        maxFileCount: 5,
-        format: FileLogFormat.text,     // or .json for NDJSON
-        baseFileName: 'LogPilot',
-      ),
-    ],
-  ),
+  config: LogPilotConfig(sinks: [fileSink]),
   child: const MyApp(),
 );
 
 // Export all logs for bug reports:
 final allLogs = await fileSink.readAll();
-Share.share(allLogs);
 ```
 
 ---
@@ -767,13 +745,13 @@ LogPilotConfig.production(   // console off, warning+, sinks only
 LogPilotConfig.web()         // info+, plain output, no caller capture, 5s dedup
 ```
 
-| Factory | Log Level | Caller | Details | Dedup | Best for |
-|---------|-----------|:------:|:-------:|-------|----------|
-| `LogPilotConfig()` | verbose | Yes | Yes | off | Default |
-| `.debug()` | verbose | Yes | Yes | off | IDE development |
-| `.staging()` | info | Yes | No | 5s | QA builds |
-| `.production()` | warning | No | No | 5s | Release (console off) |
-| `.web()` | info | No | No | 5s | Flutter Web |
+| Factory | Log Level | Caller | Details | Dedup | History / Breadcrumbs | Best for |
+|---------|-----------|:------:|:-------:|-------|:---------------------:|----------|
+| `LogPilotConfig()` | verbose | Yes | Yes | off | 500 / 20 | Default |
+| `.debug()` | verbose | Yes | Yes | off | 500 / 20 | IDE development |
+| `.staging()` | info | Yes | No | 5s | 500 / 20 | QA builds |
+| `.production()` | warning | No | No | 5s | 500 / 20 | Release (console off) |
+| `.web()` | info | No | No | 5s | 200 / 10 | Flutter Web (also: `stackTraceDepth: 4`, `maxPayloadSize: 4096`) |
 
 ---
 
@@ -820,7 +798,9 @@ final json    = LogPilot.export(format: ExportFormat.json);
 LogPilot.clearHistory();
 ```
 
-`historyWhere` supports rich filtering — all parameters combine with AND logic:
+`historyWhere` supports rich filtering — all parameters combine with AND
+logic. **The `level` parameter is a minimum severity filter**, not an
+exact match — `LogLevel.warning` returns warnings, errors, AND fatals:
 
 ```dart
 LogPilot.historyWhere(
@@ -896,9 +876,20 @@ LogPilotNavigatorObserver(
 
 ## BLoC Observer
 
+> **Not yet published** — this import **will fail** if you installed
+> `log_pilot` from pub.dev. The BLoC integration is in the
+> [GitHub repo](https://github.com/MojtabaTavakkoli/log_pilot) source only.
+>
+> **To use it now:** copy
+> [`lib/src/state/log_pilot_bloc_observer.dart`](https://github.com/MojtabaTavakkoli/log_pilot/blob/main/lib/src/state/log_pilot_bloc_observer.dart)
+> into your project and adjust the import. A standalone `log_pilot_bloc`
+> package is planned.
+
 Log BLoC/Cubit lifecycle events:
 
 ```dart
+// ⚠ REPO ONLY — this import does not work from the pub.dev package.
+// See the note above for how to use this integration today.
 import 'package:log_pilot/log_pilot_bloc.dart';
 
 void main() {
@@ -944,7 +935,12 @@ log.time('query');      // label: "DB/query"
 log.timeEnd('query');   // logs: "DB/query: 12ms" with tag "DB"
 ```
 
-`timeCancel` removes a timer without logging.
+`timeCancel` removes a timer without logging the elapsed time. If no
+matching timer exists, a `verbose`-level hint is logged to help detect
+misspelled labels or double-cancels. Note: `timeEnd` logs at `warning`
+level for a missing timer, while `timeCancel` logs at `verbose` — this
+is intentional since `timeEnd` represents an expected measurement that's
+missing.
 
 ---
 
@@ -1072,9 +1068,10 @@ final snap = LogPilot.diagnostics?.snapshot;
 LogPilot.disableDiagnostics();
 ```
 
-When throughput exceeds the threshold, the log level is automatically
-raised to `warning`. When throughput drops below half the threshold,
-the original level is restored.
+When throughput exceeds the threshold, the minimum log level is
+automatically raised to `warning`, reducing verbosity by filtering out
+verbose/debug/info messages. When throughput drops below half the
+threshold, the original level is restored.
 
 ---
 
@@ -1117,10 +1114,11 @@ final snap = LogPilot.snapshot(groupByTag: true, perTagLimit: 3);
 The core `package:log_pilot/log_pilot.dart` is fully web-compatible — zero `dart:io`
 dependency. All features work on Flutter Web:
 
-- Console output, log history, navigation observer, BLoC observer, timing
+- Console output, log history, navigation observer, timing
 - In-app log viewer overlay
 - Network logging with `LogPilotHttpClient`
 - DevTools extension
+- BLoC observer (repo-only — see [Package Imports](#package-imports))
 
 File logging requires `dart:io` — import `package:log_pilot/log_pilot_io.dart`
 for mobile/desktop only. Use `LogPilotConfig.web()` for optimized web defaults.
@@ -1169,13 +1167,14 @@ tearDown(() {
 |--------|--------------|:---------:|:----------:|
 | `package:log_pilot/log_pilot.dart` | Core: `LogPilot`, `LogPilotLogger`, `LogPilotConfig`, `LogPilotRecord`, `LogLevel`, `LogSink`, `CallbackSink`, `AsyncLogSink`, `BufferedCallbackSink`, `LogHistory`, `ExportFormat`, `LogPilotNavigatorObserver`, `LogPilotOverlay`, `LogPilotHttpClient`, ANSI helpers | Yes | Yes |
 | `package:log_pilot/log_pilot_io.dart` | `FileSink`, `FileLogFormat` (requires `dart:io`) | No | Yes |
-| `package:log_pilot/log_pilot_dio.dart` | `LogPilotDioInterceptor` (add `dio` to pubspec) | Yes | Repo only* |
-| `package:log_pilot/log_pilot_chopper.dart` | `LogPilotChopperInterceptor` (add `chopper`) | Yes | Repo only* |
-| `package:log_pilot/log_pilot_graphql.dart` | `LogPilotGraphQLLink` (add `gql`, `gql_exec`, `gql_link`) | Yes | Repo only* |
-| `package:log_pilot/log_pilot_bloc.dart` | `LogPilotBlocObserver` (add `bloc`) | Yes | Repo only* |
+| `package:log_pilot/log_pilot_dio.dart` | `LogPilotDioInterceptor` (add `dio` to pubspec) | Yes | **No** — repo only* |
+| `package:log_pilot/log_pilot_chopper.dart` | `LogPilotChopperInterceptor` (add `chopper`) | Yes | **No** — repo only* |
+| `package:log_pilot/log_pilot_graphql.dart` | `LogPilotGraphQLLink` (add `gql`, `gql_exec`, `gql_link`) | Yes | **No** — repo only* |
+| `package:log_pilot/log_pilot_bloc.dart` | `LogPilotBlocObserver` (add `bloc`) | Yes | **No** — repo only* |
 
-> \* These barrels are in the source repo but excluded from the published
-> package. They will ship as separate packages (e.g. `log_pilot_dio`) in a
+> \* **These imports WILL FAIL from the pub.dev package.** They are in the
+> source repo but `.pubignore`d from the published package. Copy the source
+> files into your project, or wait for the standalone packages (e.g. `log_pilot_dio`) in a
 > future release.
 
 ---
@@ -1204,7 +1203,7 @@ cd example && flutter run
 | **One-line setup** | Replace `runApp()` with `LogPilot.init()` — every error is auto-formatted |
 | **Pretty Flutter errors** | 15+ contextual hints, simplified stacks, clickable source locations |
 | **Level-based logging** | `verbose` / `debug` / `info` / `warning` / `error` / `fatal` with structured metadata and tags |
-| **Scoped loggers** | `LogPilot.create('AuthService')` for class-level auto-tagging |
+| **Scoped loggers** | `const LogPilotLogger('Tag')` or `LogPilot.create('Tag')` for class-level auto-tagging |
 | **Log sinks** | Route records to files, Crashlytics, Sentry, or any backend |
 | **Built-in file logging** | `FileSink` with automatic rotation by size, text or JSON format |
 | **Lazy messages** | `LogPilot.debug(() => expensiveString())` — skips work when filtered |
@@ -1225,7 +1224,7 @@ cd example && flutter run
 | **BLoC observer** | Logs create/close, events, state changes, and errors |
 | **Performance timing** | `LogPilot.time` / `LogPilot.timeEnd` — like `console.time` |
 | **Web compatible** | Core barrel is `dart:io`-free — works on Flutter Web |
-| **Lightweight core** | Optional deps (Dio, Chopper, GraphQL, BLoC) — add only what you use |
+| **Lightweight core** | Zero required dependencies beyond Flutter SDK; Dio, Chopper, GraphQL, BLoC integrations available in [source repo](https://github.com/MojtabaTavakkoli/log_pilot) (standalone packages planned) |
 
 ---
 
@@ -1234,6 +1233,33 @@ cd example && flutter run
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
 architecture details and development setup.
 
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+## Migrating from plog
+
+If you're upgrading from the `plog` package, here's a quick mapping:
+
+| plog | log_pilot |
+|------|-----------|
+| `import 'package:plog/plog.dart'` | `import 'package:log_pilot/log_pilot.dart'` |
+| `Plog.init(child: ...)` | `LogPilot.init(child: ...)` |
+| `Plog.info(...)` | `LogPilot.info(...)` |
+| `PlogLogger('Tag')` | `LogPilotLogger('Tag')` (still const-constructible) |
+| `Plog.create('Tag')` | `LogPilot.create('Tag')` |
+| `PlogConfig(...)` | `LogPilotConfig(...)` |
+| `PlogRecord` | `LogPilotRecord` |
+| `plog_dio.dart` | `log_pilot_dio.dart` (repo only) |
+| `plog_bloc.dart` | `log_pilot_bloc.dart` (repo only) |
+| `PlogNavigatorObserver` | `LogPilotNavigatorObserver` |
+| `PlogOverlay` | `LogPilotOverlay` |
+| `PlogHttpClient` | `LogPilotHttpClient` |
+
+All APIs are functionally identical — only the names changed. A
+project-wide find-and-replace of `Plog` → `LogPilot` and `plog` →
+`log_pilot` covers the vast majority of cases.

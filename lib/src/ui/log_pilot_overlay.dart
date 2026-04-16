@@ -449,7 +449,7 @@ class _LogPilotSheetState extends State<_LogPilotSheet> {
   ];
 
   static Color _colorForTag(String tag) =>
-      _tagColors[tag.hashCode.abs() % _tagColors.length];
+      _tagColors[(tag.hashCode & 0x7FFFFFFF) % _tagColors.length];
 }
 
 class _LogTile extends StatelessWidget {

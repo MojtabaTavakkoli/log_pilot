@@ -59,6 +59,10 @@ class LogPilotZone {
   /// can call the canonical snapshot builder without circular imports.
   static SnapshotBuilder? snapshotBuilder;
 
+  /// Injected by [LogPilot] so the `ext.LogPilot.exportForLLM` service
+  /// extension can call the canonical export logic without circular imports.
+  static String Function({int tokenBudget})? exportForLLMBuilder;
+
   /// Whether [init] has been called.
   static bool get isInitialized => _initialized;
 
@@ -104,6 +108,10 @@ class LogPilotZone {
   /// intended for direct use outside the package.
   static void reset() {
     _initialized = false;
+    // Do NOT reset _extensionsRegistered — dart:developer extensions
+    // persist for the VM lifetime and cannot be unregistered. The
+    // handlers reference static state on this class, which gets
+    // refreshed by init()/configure().
     _config = const LogPilotConfig();
     _printer = LogPilotPrinter(_config);
     _history = LogHistory(500);
@@ -113,6 +121,7 @@ class LogPilotZone {
     _errorParser = null;
     _userCallback = null;
     snapshotBuilder = null;
+    exportForLLMBuilder = null;
     _lastErrorSignature = null;
     _lastErrorTimestamp = 0;
     _cascadeSuppressed = 0;
@@ -166,6 +175,12 @@ class LogPilotZone {
     LogPilotErrorCallback? onError,
     required Widget child,
   }) {
+    assert(
+      !_initialized,
+      'LogPilot.init() was called twice. This replaces runApp() — '
+      'do NOT call both LogPilot.init() and runApp(). '
+      'Use LogPilot.configure() if you want to call runApp() yourself.',
+    );
     _config = config ?? const LogPilotConfig();
     _printer = LogPilotPrinter(_config);
     _history = _config.maxHistorySize > 0
@@ -191,7 +206,6 @@ class LogPilotZone {
 
         FlutterError.onError = (FlutterErrorDetails details) {
           _errorParser!.parse(details);
-          _userCallback?.call(details.exception, details.stack);
 
           _dispatchErrorToSinks(
             error: details.exception,
@@ -205,16 +219,20 @@ class LogPilotZone {
         PlatformDispatcher.instance.onError =
             (Object error, StackTrace stack) {
           final text = '${error.runtimeType} $error';
-          if (!_config.isSilenced(text)) {
-            _printer.printLog(
-              level: _levelForError(error),
-              title: 'Platform Error',
-              message: error.toString(),
-              error: error,
-              stackTrace: stack,
-            );
+          if (_config.isSilenced(text)) {
+            if (originalPlatformOnError != null) {
+              return originalPlatformOnError(error, stack);
+            }
+            return true;
           }
-          _userCallback?.call(error, stack);
+
+          _printer.printLog(
+            level: _levelForError(error),
+            title: 'Platform Error',
+            message: error.toString(),
+            error: error,
+            stackTrace: stack,
+          );
 
           _dispatchErrorToSinks(
             error: error,
@@ -233,16 +251,15 @@ class LogPilotZone {
       },
       (Object error, StackTrace stack) {
         final text = '${error.runtimeType} $error';
-        if (!_config.isSilenced(text)) {
-          _printer.printLog(
-            level: _levelForError(error),
-            title: 'Uncaught Exception',
-            message: error.toString(),
-            error: error,
-            stackTrace: stack,
-          );
-        }
-        _userCallback?.call(error, stack);
+        if (_config.isSilenced(text)) return;
+
+        _printer.printLog(
+          level: _levelForError(error),
+          title: 'Uncaught Exception',
+          message: error.toString(),
+          error: error,
+          stackTrace: stack,
+        );
 
         _dispatchErrorToSinks(
           error: error,
@@ -294,6 +311,10 @@ class LogPilotZone {
     _lastErrorTimestamp = nowMs;
     _cascadeSuppressed = 0;
 
+    // Fire the user callback only for non-suppressed errors so external
+    // crash reporters (Crashlytics, Sentry) don't receive cascade duplicates.
+    _userCallback?.call(error, stackTrace);
+
     final eid = generateErrorId(error: error, stackTrace: stackTrace);
     final crumbs = _breadcrumbs?.crumbs;
 
@@ -326,7 +347,7 @@ class LogPilotZone {
   }
 
   static LogLevel _levelForError(Object error) {
-    if (error is AssertionError) return LogLevel.warning;
+    if (error is AssertionError) return LogLevel.error;
     if (error is Error) return LogLevel.fatal;
     return LogLevel.error;
   }
@@ -405,6 +426,15 @@ class LogPilotZone {
       _history?.clear();
       return developer.ServiceExtensionResponse.result(
         jsonEncode({'cleared': true}),
+      );
+    });
+
+    developer.registerExtension('ext.LogPilot.exportForLLM',
+        (String method, Map<String, String> params) async {
+      final budget = int.tryParse(params['token_budget'] ?? '') ?? 4000;
+      final result = exportForLLMBuilder?.call(tokenBudget: budget) ?? '';
+      return developer.ServiceExtensionResponse.result(
+        jsonEncode({'result': result}),
       );
     });
 

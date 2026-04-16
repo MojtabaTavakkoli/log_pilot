@@ -25,12 +25,15 @@ class RateLimiter {
   /// - [RateLimitAction.suppress] — duplicate within the window, skip
   /// - [RateLimitAction.summarize] — window expired with suppressed
   ///   duplicates, print a summary of how many were suppressed
+  static const _maxEntries = 1000;
+
   RateLimitResult check(LogLevel level, String message) {
     final key = (level: level, message: message);
     final now = DateTime.now();
     final entry = _entries[key];
 
     if (entry == null) {
+      if (_entries.length >= _maxEntries) _evictStale(now);
       _entries[key] = _Entry(firstSeen: now, lastSeen: now, count: 1);
       return const RateLimitResult(RateLimitAction.allow, 0);
     }
@@ -50,6 +53,18 @@ class RateLimiter {
       return RateLimitResult(RateLimitAction.summarize, suppressed);
     }
     return const RateLimitResult(RateLimitAction.allow, 0);
+  }
+
+  void _evictStale(DateTime now) {
+    _entries.removeWhere(
+        (_, entry) => now.difference(entry.lastSeen) > window * 2);
+    if (_entries.length >= _maxEntries) {
+      final oldest = _entries.entries.toList()
+        ..sort((a, b) => a.value.lastSeen.compareTo(b.value.lastSeen));
+      for (var i = 0; i < oldest.length ~/ 2; i++) {
+        _entries.remove(oldest[i].key);
+      }
+    }
   }
 
   /// Flush all entries and return summaries for any that had suppressed

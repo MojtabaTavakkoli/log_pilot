@@ -92,7 +92,8 @@ class LogPilotRecord {
   ///
   /// Useful for file logging, remote backends, and structured export.
   /// The [error] and [stackTrace] are converted to strings since they
-  /// are not inherently JSON-serializable.
+  /// are not inherently JSON-serializable. Non-serializable metadata
+  /// values are converted to their string representations.
   Map<String, dynamic> toJson() => {
         'level': level.label,
         'timestamp': timestamp.toIso8601String(),
@@ -102,7 +103,7 @@ class LogPilotRecord {
         if (message != null) 'message': message,
         if (tag != null) 'tag': tag,
         if (caller != null) 'caller': caller,
-        if (metadata != null) 'metadata': metadata,
+        if (metadata != null) 'metadata': _safeMetadata(metadata!),
         if (error != null) 'error': error.toString(),
         if (stackTrace != null) 'stackTrace': stackTrace.toString(),
         if (breadcrumbs != null && breadcrumbs!.isNotEmpty)
@@ -113,6 +114,21 @@ class LogPilotRecord {
   ///
   /// Convenient for appending to log files where each line is one record.
   String toJsonString() => jsonEncode(toJson());
+
+  static Map<String, dynamic> _safeMetadata(Map<String, dynamic> meta) {
+    return meta.map((key, value) => MapEntry(key, _safeValue(value)));
+  }
+
+  static dynamic _safeValue(dynamic value) {
+    if (value == null || value is num || value is bool || value is String) {
+      return value;
+    }
+    if (value is List) return value.map(_safeValue).toList();
+    if (value is Map) {
+      return value.map((k, v) => MapEntry(k.toString(), _safeValue(v)));
+    }
+    return value.toString();
+  }
 
   /// Format this record as a compact, human-readable single line.
   ///
@@ -133,7 +149,7 @@ class LogPilotRecord {
     if (message != null) buffer.write(' $message');
     if (error != null) buffer.write(' | Error: $error');
     if (metadata != null && metadata!.isNotEmpty) {
-      buffer.write(' | ${jsonEncode(metadata)}');
+      buffer.write(' | ${jsonEncode(_safeMetadata(metadata!))}');
     }
     return buffer.toString();
   }
