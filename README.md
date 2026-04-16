@@ -364,7 +364,7 @@ root on Windows), you have two fallback options:
 dart run log_pilot_mcp --vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws
 ```
 
-Or use the `log_pilot_VM_SERVICE_URI` environment variable.
+Or use the `LOG_PILOT_VM_SERVICE_URI` environment variable.
 
 ### Troubleshooting
 
