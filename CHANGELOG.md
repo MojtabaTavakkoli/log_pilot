@@ -1,3 +1,20 @@
+## 1.0.0
+
+First stable release graduation.
+
+### Added
+- **Option A/B/C Setup**: Reorganized the "Quick Start" documentation with clear setup levels and decision tables to prevent double-initialization bugs.
+- **Enhanced Example**: Updated the demo app with broader AI agent audience metadata and clearer setup comments.
+
+### Changed
+- **IDE-Agnostic MCP Setup**: Transitioned all MCP server instructions from Cursor-only to a universal multi-IDE configuration (supports VS Code/Copilot, Windsurf, Claude Code, Antigravity, etc.).
+- **Flutter Web Clarity**: Updated the Web documentation to explicitly state auto-discovery limitations and mark capture scripts as optional/experimental fallback.
+
+### Fixed
+- Fixed setup instruction bias that previously prioritized absolute paths and IDE-specific reload shortcuts.
+
+---
+
 ## 1.0.0-beta.1
 
 First beta toward the stable 1.0 release.
