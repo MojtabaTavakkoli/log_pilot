@@ -47,4 +47,15 @@ The app has numbered sections covering:
 - `LogPilotBlocObserver` as `Bloc.observer`
 - Conditional `FileSink` via platform-specific imports (IO vs web)
 
+## MCP Server
+
+The example includes `log_pilot_mcp` as a dev dependency. To test the
+MCP server:
+
+1. Run the example app: `flutter run`
+2. Add the LogPilot server to your IDE's MCP config (see the
+   [main README](../README.md#mcp-server) for per-IDE locations)
+3. Enable the LogPilot MCP server in your IDE's MCP settings
+4. Ask the agent to call `get_snapshot` or `query_logs`
+
 See [`example.md`](example.md) for standalone code snippets.

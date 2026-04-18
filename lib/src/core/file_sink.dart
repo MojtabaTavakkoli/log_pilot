@@ -90,7 +90,7 @@ class FileSink implements LogSink {
   final List<String> _buffer = [];
   Timer? _flushTimer;
   bool _initialized = false;
-  bool _rotating = false;
+  Future<void>? _pendingFlush;
 
   static const _maxBufferSize = 100;
 
@@ -169,9 +169,24 @@ class FileSink implements LogSink {
   String _rotatedPath(int index) =>
       '${directory.path}/$baseFileName.$index.log';
 
+  /// Serialized flush: concurrent calls wait for the in-flight flush
+  /// to finish, then drain any records that accumulated during the wait.
   Future<void> _flush() async {
     if (_buffer.isEmpty) return;
+    if (_pendingFlush != null) {
+      await _pendingFlush;
+      if (_buffer.isNotEmpty) return _flush();
+      return;
+    }
+    _pendingFlush = _doFlush();
+    try {
+      await _pendingFlush;
+    } finally {
+      _pendingFlush = null;
+    }
+  }
 
+  Future<void> _doFlush() async {
     final lines = List<String>.of(_buffer);
     _buffer.clear();
 
@@ -179,35 +194,28 @@ class FileSink implements LogSink {
     final content = '${lines.join('\n')}\n';
     await file.writeAsString(content, mode: FileMode.append, flush: true);
 
-    if (!_rotating) {
-      final length = await file.length();
-      if (length >= maxFileSize) {
-        await _rotate();
-      }
+    final length = await file.length();
+    if (length >= maxFileSize) {
+      await _rotate();
     }
   }
 
   Future<void> _rotate() async {
-    _rotating = true;
-    try {
-      final oldest = File(_rotatedPath(maxFileCount - 1));
-      if (oldest.existsSync()) {
-        await oldest.delete();
-      }
+    final oldest = File(_rotatedPath(maxFileCount - 1));
+    if (oldest.existsSync()) {
+      await oldest.delete();
+    }
 
-      for (var i = maxFileCount - 2; i >= 1; i--) {
-        final source = File(_rotatedPath(i));
-        if (source.existsSync()) {
-          await source.rename(_rotatedPath(i + 1));
-        }
+    for (var i = maxFileCount - 2; i >= 1; i--) {
+      final source = File(_rotatedPath(i));
+      if (source.existsSync()) {
+        await source.rename(_rotatedPath(i + 1));
       }
+    }
 
-      final active = _activeFile;
-      if (active.existsSync()) {
-        await active.rename(_rotatedPath(1));
-      }
-    } finally {
-      _rotating = false;
+    final active = _activeFile;
+    if (active.existsSync()) {
+      await active.rename(_rotatedPath(1));
     }
   }
 }

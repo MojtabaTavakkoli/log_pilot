@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:log_pilot/log_pilot.dart';
 
 void main() {
+  // init() calls runApp() internally — do NOT call runApp() separately.
   LogPilot.init(child: const MyApp());
 }
 ```

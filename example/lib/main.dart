@@ -1079,7 +1079,7 @@ class _ExampleHome extends StatelessWidget {
               outputFormat: OutputFormat.plain,
             ));
             LogPilot.info('Now using OutputFormat.plain', tag: 'agent', metadata: {
-              'audience': 'AI agents (Cursor, Claude Code, Copilot)',
+              'audience': 'AI agents (Cursor, Claude Code, Copilot, Windsurf, Antigravity, Gemini CLI)',
               'format': '[LEVEL] [tag] message | metadata',
             });
             LogPilot.warning('AI agents can parse this without regex', tag: 'agent');

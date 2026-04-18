@@ -5,8 +5,6 @@ architecture, design decisions, and development workflow.
 
 ## Repository Structure
 
-This is a multi-package repository:
-
 ```
 log_pilot/
 ├── lib/                    # Main LogPilot library (published on pub.dev)
@@ -15,9 +13,12 @@ log_pilot/
 ├── screenshots/            # README images and GIFs (published)
 ├── extension/devtools/     # Pre-compiled DevTools extension web build
 ├── log_pilot_devtools/       # DevTools extension source (Flutter web app)
-├── log_pilot_mcp/            # MCP server for AI agent integration
 └── .github/workflows/      # CI/CD
 ```
+
+> **Note:** The MCP server is a separate package:
+> [`log_pilot_mcp`](https://github.com/MojtabaTavakkoli/log_pilot_mcp).
+> Install it with `dart pub add --dev log_pilot_mcp`.
 
 ## Architecture
 
@@ -171,8 +172,8 @@ flutter analyze
 
 ### Branch Naming
 
-All work happens on short-lived branches off `main`. Use a prefix that
-describes the purpose:
+**Stable work** happens on short-lived branches off `main`. Use a prefix
+that describes the purpose:
 
 | Prefix | Purpose | Example |
 |--------|-----------------------------|--------------------------------|
@@ -184,6 +185,30 @@ describes the purpose:
 | `chore/` | CI, tooling, dependencies | `chore/upgrade-flutter-lints` |
 
 Keep names lowercase with hyphens. Branches are deleted after merge.
+
+### Release / Beta Branches
+
+For major releases, we use a long-lived **release branch** with
+short-lived **dev branches** on top:
+
+```
+main ──────────────────────────────────────── (stable releases)
+  \                                       /
+   release/X.0.0-beta ──────────────────     (beta integration)
+     \        \        \
+      feature/  fix/    feature/              (dev work, PR into release branch)
+      X.0-foo   X.0-bar X.0-baz
+```
+
+| Branch type | Naming | Target |
+|-------------|--------|--------|
+| Release branch | `release/1.0.0-beta` | Forks from `main`, merges back when stable |
+| Dev branches | `feature/1.0-description`, `fix/1.0-description` | PR into `release/1.0.0-beta` |
+| Hotfixes for stable | `fix/description` | PR into `main` (cherry-pick to release if needed) |
+
+**Beta versions** use SemVer prerelease tags: `1.0.0-beta.1`,
+`1.0.0-beta.2`, etc. When the beta graduates, the version becomes
+`1.0.0` and the release branch merges into `main`.
 
 ### Commit Messages
 

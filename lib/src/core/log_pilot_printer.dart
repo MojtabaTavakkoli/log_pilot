@@ -29,8 +29,10 @@ class LogPilotPrinter {
   static const _horizontalLine = '─';
   static const _divider = '├';
 
-  String _border(String corner) =>
-      '$corner${_horizontalLine * (config.maxLineWidth - 1)}';
+  String _border(String corner) {
+    final count = (config.maxLineWidth - 1).clamp(0, config.maxLineWidth);
+    return '$corner${_horizontalLine * count}';
+  }
 
   String _padLine(String text) => '$_verticalLine $text';
 
@@ -360,7 +362,7 @@ class LogPilotPrinter {
 
   /// Wrap text to fit inside the box, stripping ANSI for measurement.
   List<String> _wrapText(String text) {
-    final contentWidth = config.maxLineWidth - 4;
+    final contentWidth = (config.maxLineWidth - 4).clamp(1, config.maxLineWidth);
     final result = <String>[];
     for (final rawLine in text.split('\n')) {
       if (stripAnsi(rawLine).length <= contentWidth) {

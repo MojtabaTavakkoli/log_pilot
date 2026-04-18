@@ -110,21 +110,23 @@ class LogPilotHttpClient extends http.BaseClient {
 
       final bytes = await streamedResponse.stream.toBytes();
       String? responseBody;
-      if (logResponseBody) {
-        if (maxResponseBodySize > 0 && bytes.length > maxResponseBodySize) {
-          try {
+      if (logResponseBody && bytes.isNotEmpty) {
+        final logLimit = maxResponseBodySize > 0
+            ? maxResponseBodySize
+            : bytes.length;
+        final truncated = bytes.length > logLimit;
+        try {
+          responseBody = utf8.decode(
+            truncated ? bytes.sublist(0, logLimit) : bytes,
+            allowMalformed: true,
+          );
+          if (truncated) {
             responseBody =
-                '${utf8.decode(bytes.sublist(0, maxResponseBodySize), allowMalformed: true)}'
-                '\n... truncated (${bytes.length} bytes total)';
-          } catch (_) {
-            responseBody = '<binary ${bytes.length} bytes, truncated>';
+                '$responseBody\n... truncated (${bytes.length} bytes total)';
           }
-        } else {
-          try {
-            responseBody = utf8.decode(bytes);
-          } catch (_) {
-            responseBody = '<binary ${bytes.length} bytes>';
-          }
+        } catch (_) {
+          responseBody = '<binary ${bytes.length} bytes'
+              '${truncated ? ", truncated" : ""}>';
         }
       }
 
@@ -174,7 +176,7 @@ class LogPilotHttpClient extends http.BaseClient {
         persistentConnection: streamedResponse.persistentConnection,
         reasonPhrase: streamedResponse.reasonPhrase,
       );
-    } catch (e) {
+    } catch (e, st) {
       stopwatch.stop();
 
       _p.printNetwork(
@@ -195,6 +197,7 @@ class LogPilotHttpClient extends http.BaseClient {
               ' (${stopwatch.elapsedMilliseconds}ms)',
           tag: 'http',
           error: e,
+          stackTrace: st,
           metadata: {
             'method': request.method,
             'url': request.url.toString(),

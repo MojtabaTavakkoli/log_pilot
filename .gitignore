@@ -27,7 +27,6 @@ migrate_working_dir/
 /pubspec.lock
 example/pubspec.lock
 log_pilot_devtools/pubspec.lock
-log_pilot_mcp/pubspec.lock
 **/doc/api/
 .dart_tool/
 .flutter-plugins
