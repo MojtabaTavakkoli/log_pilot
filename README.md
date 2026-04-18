@@ -123,10 +123,10 @@ developer — you must ask them and wait.**
    requires the app to be running so it can write the VM service URI.
    If the app is not running, ask the developer to run `flutter run` first.
 
-3. **Create or update `.cursor/mcp.json`** in the **workspace root** (the
-   folder open in Cursor). If the file already exists, merge the `LogPilot`
-   entry into the existing `mcpServers` object — do not overwrite other
-   servers.
+3. **Add the LogPilot MCP server to the IDE's MCP configuration.**
+
+   The server entry is the same for every IDE — only the config file
+   location differs:
 
    ```json
    {
@@ -139,17 +139,31 @@ developer — you must ask them and wait.**
    }
    ```
 
+   | IDE / Client | Config location | Notes |
+   |---|---|---|
+   | **Cursor** | `.cursor/mcp.json` in workspace root | Merge into existing `mcpServers` if file exists |
+   | **VS Code (Copilot)** | `.vscode/mcp.json` in workspace root | Requires GitHub Copilot Chat with MCP support |
+   | **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | Global config; merge into existing `mcpServers` |
+   | **Claude Code** | `~/.claude/mcp.json` or via CLI flag | See _Claude Code / Terminal Usage_ below |
+   | **Antigravity** | Managed via IDE settings UI | Developer adds the server through the MCP settings panel |
+   | **Other MCP clients** | Consult your client's docs | Any stdio-based MCP client works with the JSON above |
+
+   If the config file already exists, merge the `LogPilot` entry into the
+   existing `mcpServers` object — do **not** overwrite other servers.
+
    > **Flutter Web only:** Auto-discovery does not work (no `dart:io`).
    > Add `"--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws"` to the `args`
-   > array, using the URI from the debug console.
+   > array, using the URI from the debug console. This URI changes on
+   > every restart.
 
-4. **Ask the developer to enable the server.** This is a **two-step manual
-   process** that the developer must do in Cursor:
-   - Press `Ctrl+Shift+P` → **"Developer: Reload Window"** (so Cursor
-     picks up the new `mcp.json`)
-   - Open **Cursor Settings → MCP** and **toggle the LogPilot server ON**
-     (new servers default to OFF)
-   - Verify a green dot appears next to LogPilot
+4. **Ask the developer to enable the server in their IDE.** Most IDEs
+   require a manual step to activate a newly added MCP server:
+   - **Cursor:** Reload the window (`Ctrl+Shift+P` → "Developer: Reload
+     Window"), then toggle LogPilot **ON** in Cursor Settings → MCP
+   - **VS Code:** Reload the window and check the MCP panel
+   - **Windsurf / Antigravity / others:** Follow the IDE's own MCP
+     server activation flow
+   - Verify the server shows a "connected" or green status indicator
 
 **After the developer confirms the server is enabled**, you will see
 LogPilot MCP tools (`get_snapshot`, `query_logs`, etc.) in your available
@@ -163,8 +177,9 @@ tools. Call `get_snapshot` to verify the connection is working.
 - Use `const LogPilotLogger('Tag')` in classes for automatic tagging.
 - Never silence errors with empty catch blocks — log them.
 
-Copy this block into `.cursor/rules/`, `AGENTS.md`, `GEMINI.md`, or
-`CLAUDE.md` for correct agent behavior in your project.
+Copy this block into your project's agent instruction file (e.g.
+`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, or your IDE's rules directory)
+for correct agent behavior.
 
 ---
 
@@ -267,7 +282,9 @@ flutter run
 LogPilot writes the VM service URI to
 `.dart_tool/log_pilot_vm_service_uri` automatically on native platforms.
 
-**Step 3 — Create `.cursor/mcp.json`** in your **app's project root**:
+**Step 3 — Add LogPilot to your IDE's MCP configuration.**
+
+The server entry JSON is the same for every IDE:
 
 ```json
 {
@@ -280,21 +297,40 @@ LogPilot writes the VM service URI to
 }
 ```
 
-> **Flutter Web:** Auto-discovery is not available (no `dart:io`). Copy the
-> `ws://...` URI from the debug console and add
+Where to put it depends on your IDE:
+
+| IDE / Client | Config location |
+|---|---|
+| **Cursor** | `.cursor/mcp.json` in workspace root |
+| **VS Code (Copilot)** | `.vscode/mcp.json` in workspace root |
+| **Windsurf** | `~/.codeium/windsurf/mcp_config.json` (global) |
+| **Claude Code** | `~/.claude/mcp.json` or pass via CLI (see below) |
+| **Antigravity** | Add via IDE Settings → MCP panel |
+| **Other clients** | Any stdio MCP client — consult its docs for config location |
+
+If the config file already exists, merge the `LogPilot` entry into the
+existing `mcpServers` object — do not overwrite other servers.
+
+> **Flutter Web:** Auto-discovery is not available (no `dart:io`). You
+> must pass the VM service URI manually. Copy the `ws://...` URI from
+> the Flutter debug console and add
 > `"--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws"` to the `args` array.
+> This URI changes on every restart, so you will need to update it each
+> time. See [Flutter Web](#flutter-web-mcp) below for more details.
 
-**Step 4 — Enable the server in Cursor:**
+**Step 4 — Enable the server in your IDE:**
 
-> **You MUST complete all three steps — the server will NOT work otherwise.**
+Most IDEs require a manual activation step for newly added MCP servers:
 
-1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) → **"Developer: Reload
-   Window"** to pick up the new `mcp.json`
-2. Open **Cursor Settings → MCP**, find `LogPilot`, and **toggle it ON**
-   (new servers default to OFF)
-3. Verify it shows a green dot (connected)
+- **Cursor:** Press `Ctrl+Shift+P` (or `Cmd+Shift+P`) → "Developer:
+  Reload Window", then open **Cursor Settings → MCP** and toggle
+  LogPilot **ON** (new servers default to OFF)
+- **VS Code:** Reload the window and verify in the MCP panel
+- **Windsurf / Antigravity / others:** Follow your IDE's MCP server
+  activation flow
 
-Verify by asking your agent to call `get_snapshot`.
+Verify the server shows a "connected" status, then ask your agent to
+call `get_snapshot`.
 
 ### Auto-Discovery
 
@@ -313,11 +349,17 @@ mode. The MCP server:
 
 **No manual URI copying is needed** in the normal native workflow.
 
+<a id="flutter-web-mcp"></a>
 **Flutter Web:** Auto-discovery does not work on web (no `dart:io`). You
-must pass the URI manually — see the
-[`log_pilot_mcp` Flutter Web docs](https://github.com/MojtabaTavakkoli/log_pilot_mcp#flutter-web)
-for platform-specific helper scripts (bash + PowerShell) that capture the
-URI on each restart.
+must pass the VM service URI manually — it changes on every app restart.
+The simplest approach is to copy the `ws://...` URI from Flutter's debug
+console and update the `--vm-service-uri` argument in your MCP config.
+
+The [`log_pilot_mcp` repo](https://github.com/MojtabaTavakkoli/log_pilot_mcp#flutter-web)
+provides optional helper scripts (bash + PowerShell) that automate this
+capture by parsing `flutter run` output. **Note:** these scripts depend
+on the exact format of Flutter's console output and may need adjustment
+across Flutter SDK versions.
 
 **If auto-discovery fails on native** (e.g., `.dart_tool` is not in the
 expected location, or the app's working directory differs from the project
@@ -370,8 +412,8 @@ Or use the `LOG_PILOT_VM_SERVICE_URI` environment variable.
 
 | Problem | Solution |
 |---------|----------|
-| Server shows "Disabled" in Cursor Settings → MCP | Toggle the switch **ON** manually. New servers default to disabled. |
-| Server not appearing in MCP settings | Reload the Cursor window after creating/editing `mcp.json`. |
+| Server shows "Disabled" in IDE's MCP settings | Toggle the switch **ON** manually. Most IDEs default new servers to disabled. |
+| Server not appearing in MCP settings | Reload your IDE window after creating/editing the MCP config file. |
 | `Could not find package "log_pilot_mcp"` | Run `dart pub add --dev log_pilot_mcp` in your app's directory first. |
 | `Failed to connect to VM service` | App isn't running in debug mode, or the URI is stale. Start the app first. |
 | Auto-discovery file not created | On Windows, the app's working directory may not match the project root. Pass `--project-root=<APP_PATH>` or use `--vm-service-uri` manually. |
@@ -464,35 +506,49 @@ dependencies:
 
 ### Pick Your Setup Level
 
-**Full setup** — error zones + logging (recommended):
+LogPilot offers three setup levels. **Choose one:**
 
-> **`LogPilot.init()` calls `runApp()` internally — do NOT call `runApp()`
-> yourself.** Writing both `LogPilot.init(child: MyApp())` and
-> `runApp(MyApp())` will produce confusing double-initialization bugs.
+| Setup | What it does | You call `runApp()`? |
+|---|---|:---:|
+| **Option A:** `LogPilot.init()` | Full setup — error zones + logging. **Replaces `runApp()`.** | ❌ No — `init()` calls it for you |
+| **Option B:** `LogPilot.configure()` | Config + service extensions only. | ✅ Yes — you call `runApp()` yourself |
+| **Option C:** *(no init)* | Zero setup — works with defaults in debug mode. | ✅ Yes |
+
+---
+
+#### Option A: `LogPilot.init()` — Full Setup *(recommended)*
+
+> ⚠️ **`init()` calls `runApp()` internally.** Do **NOT** also call
+> `runApp()` — doing so will cause double-initialization bugs.
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:log_pilot/log_pilot.dart';
 
 void main() {
-  // This replaces runApp() — do not call runApp() separately!
+  // This REPLACES runApp() — do NOT call runApp() separately!
   LogPilot.init(child: const MyApp());
 }
 ```
 
 This auto-catches every Flutter error, platform error, and uncaught zone
-exception.
+exception. It also registers service extensions required for DevTools and
+MCP.
 
-**Config only** — you call `runApp()` yourself:
+#### Option B: `LogPilot.configure()` — Config Only
+
+> Use this when you have your own error-handling setup (e.g. Firebase
+> Crashlytics' `runZonedGuarded`) and don't want LogPilot to wrap the app.
+> **You are responsible for calling `runApp()` yourself.**
 
 ```dart
 void main() {
   LogPilot.configure(config: LogPilotConfig(logLevel: LogLevel.info));
-  runApp(const MyApp());
+  runApp(const MyApp());  // ← YOU call runApp()
 }
 ```
 
-**Zero setup** — works immediately with sensible defaults:
+#### Option C: Zero Setup
 
 ```dart
 LogPilot.info('Hello world'); // no init needed in debug mode
