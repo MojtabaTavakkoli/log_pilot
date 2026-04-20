@@ -1,3 +1,31 @@
+## 1.1.0-beta.1
+
+Beta release focused on documentation quality and agent setup reliability.
+
+### Docs: README Overhaul
+
+- **Eliminated triple-duplication** of MCP setup instructions. The human-facing
+  "MCP Server" section now links to `log_pilot_mcp` README for IDE-specific
+  configs, troubleshooting, and tool reference instead of repeating them.
+- **Removed orphaned "Claude Code / Terminal Usage" section** that added no
+  information beyond what the IDE dropdowns already covered.
+- **Collapsed "Crash Reporter Integration" section** into cross-references to
+  Quick Start Options A and C, removing ~30 lines of duplicated Firebase code.
+- **Simplified `init()` vs `configure()` comparison table** — removed the
+  "No init" column (already covered by Option D) and added a concise note.
+- **Rewrote agent MCP setup (step 3)** from a 90-line decision tree with 4 JSON
+  examples into a compact algorithm: detect OS, pick command, add only needed
+  flags, two examples.
+- **Agent step 2** now tells the agent to run `flutter run` itself instead of
+  deferring to the developer.
+- **Agent step 4** simplified from a canned message template to a concise
+  instruction.
+- **Condensed Auto-Discovery section** — removed bullet-list internals and
+  Flutter Web helper script prose, linked to `log_pilot_mcp` docs instead.
+- **Net reduction: ~425 lines** (1742 → 1317) with no information loss.
+
+---
+
 ## 1.0.0
 
 First stable release graduation.
