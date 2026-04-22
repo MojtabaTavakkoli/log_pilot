@@ -131,6 +131,12 @@ developer — you must ask them and wait.**
    ```bash
    dart pub add --dev log_pilot_mcp
    ```
+2. **Ensure the Flutter app is running in debug mode.** Auto-discovery
+   requires the app to be running so it can write the VM service URI.
+   If the app is not running, ask the developer to run `flutter run` first.
+   On **Android/iOS**, auto-discovery from the device is not possible —
+   use `--project-root` in the MCP config or ask the developer to run
+   `log_pilot_mcp write-uri <ws://...>` from the host machine.
 
    > **Agents: prefer global activation.** It avoids working-directory
    > problems — `dart run log_pilot_mcp` only works from the directory
@@ -313,10 +319,83 @@ Antigravity, Gemini CLI), see the
 
 ### Auto-Discovery
 
-On native platforms, LogPilot writes the Dart VM service URI to
-`.dart_tool/log_pilot_vm_service_uri` on every debug launch. The MCP
-server watches this file and reconnects automatically on hot restart and
-full restart. No manual URI copying needed.
+LogPilot writes the Dart VM WebSocket URI to
+`.dart_tool/log_pilot_vm_service_uri` every time your app starts in debug
+mode. The MCP server:
+
+- Reads the file on startup
+- Watches for changes (file system watcher)
+- If the file doesn't exist yet (server started before app), waits for it
+  to appear
+- On hot restart: isolate recycles, extensions re-register, server detects
+  the isolate event and re-resolves on the next tool call
+- On full restart: URI changes, file updates, server detects the change and
+  reconnects within the watch interval
+
+**No manual URI copying is needed** in the normal desktop workflow.
+
+**Android / iOS:** The app runs on a device and cannot write to the host's
+`.dart_tool` directory. Use one of these approaches on the host machine:
+
+1. **`write-uri` command** — copy the `ws://...` URI from the debug console
+   and run: `log_pilot_mcp write-uri ws://127.0.0.1:PORT/TOKEN=/ws`
+   (add `--project-root=<APP_PATH>` if needed). The MCP server's file
+   watcher detects the change and reconnects automatically.
+2. **`--project-root`** — add `--project-root=<ABSOLUTE_PATH_TO_YOUR_APP>`
+   to the MCP server args so it knows where to watch for the URI file.
+
+<a id="flutter-web-mcp"></a>
+**Flutter Web:** Auto-discovery does not work on web (no `dart:io`). You
+must pass the VM service URI manually — it changes on every app restart.
+The simplest approach is to copy the `ws://...` URI from Flutter's debug
+console and update the `--vm-service-uri` argument in your MCP config.
+
+The [`log_pilot_mcp` repo](https://github.com/MojtabaTavakkoli/log_pilot_mcp#flutter-web)
+provides optional helper scripts (bash + PowerShell) that automate this
+capture by parsing `flutter run` output. **Note:** these scripts depend
+on the exact format of Flutter's console output and may need adjustment
+across Flutter SDK versions.
+
+**If auto-discovery fails on desktop** (e.g., `.dart_tool` is not in the
+expected location, or the app's working directory differs from the project
+root on Windows), you have two fallback options:
+
+1. **Pass the project root** — add
+   `--project-root=<ABSOLUTE_PATH_TO_YOUR_APP>` to the `args` array so the
+   server knows where to find `.dart_tool/log_pilot_vm_service_uri`.
+2. **Pass the URI manually** — copy the `ws://...` URI from the Flutter
+   debug console and add `--vm-service-uri=ws://127.0.0.1:PORT/TOKEN=/ws`
+   to the `args` array in `mcp.json`.
+
+### What Agents Can Do
+
+| Tool | What it does |
+|------|--------------|
+| `get_snapshot` | Structured summary: session ID, config, history counts, recent errors, active timers. Supports `group_by_tag` for per-tag breakdown. |
+| `query_logs` | Filter by level, tag, message text, trace ID, error presence, metadata key. `deduplicate: true` collapses repeated entries while preserving different call sites. |
+| `export_logs` | Full history as human-readable text or NDJSON. |
+| `export_for_llm` | Compressed summary optimized for LLM context windows — prioritizes errors, deduplicates, truncates verbose entries. |
+| `set_log_level` / `get_log_level` | Change or read verbosity at runtime. Crank to `verbose` for debugging, back to `warning` when done. |
+| `clear_logs` | Wipe in-memory history. |
+| `watch_logs` | Stream new entries as MCP push notifications. Filter by tag and level. |
+| `stop_watch` | Stop the watcher and get a delivery summary. |
+
+| Resource | Contents |
+|----------|----------|
+| `LogPilot://config` | Current LogPilotConfig as JSON |
+| `LogPilot://session` | Session ID and active trace ID |
+| `LogPilot://tail` | Latest batch from the active watcher (subscribable) |
+
+### Agent Debugging Workflow
+
+1. `get_snapshot` — see what's happening (errors, config, timers)
+2. `set_log_level(level: "verbose")` — increase detail
+3. *Reproduce the issue*
+4. `query_logs(level: "error", deduplicate: true)` — find the root cause
+5. `export_for_llm(token_budget: 2000)` — get compressed context for analysis
+6. `set_log_level(level: "warning")` — restore quiet mode
+
+### Claude Code / Terminal Usage
 
 **Flutter Web** has no `dart:io`, so auto-discovery is unavailable — you
 must pass `--vm-service-uri` manually. See the
@@ -327,7 +406,15 @@ for details and helper scripts.
 `--project-root=<ABSOLUTE_PATH_TO_APP>` to the MCP server args, or pass
 `--vm-service-uri` directly.
 
-### Tools, Parameters & Troubleshooting
+| Problem | Solution |
+|---------|----------|
+| Server shows "Disabled" in IDE's MCP settings | Toggle the switch **ON** manually. Most IDEs default new servers to disabled. |
+| Server not appearing in MCP settings | Reload your IDE window after creating/editing the MCP config file. |
+| `Could not find package "log_pilot_mcp"` | Run `dart pub add --dev log_pilot_mcp` in your app's directory first. |
+| `Failed to connect to VM service` | App isn't running in debug mode, or the URI is stale. Start the app first. |
+| Auto-discovery file not created | On Windows, the app's working directory may not match the project root. On Android/iOS, the device can't write to the host. Pass `--project-root=<APP_PATH>`, use `log_pilot_mcp write-uri <ws://...>`, or `--vm-service-uri` manually. |
+| Tools fail after hot restart | Auto-recovers on the next call. If it persists, the VM port changed (full restart) — the URI file watcher handles this. |
+| Server connects but tools return errors | The app must `import 'package:log_pilot/log_pilot.dart'` so the library is loaded. |
 
 See the [`log_pilot_mcp` README](https://github.com/MojtabaTavakkoli/log_pilot_mcp)
 for the full MCP tool reference, parameter tables, debugging workflow,
@@ -639,6 +726,11 @@ class AuthService {
   }
 }
 ```
+
+All instance methods accept an optional `tag:` override — when provided it
+replaces the instance tag for that single call. This makes the static and
+instance APIs fully compatible: `_log.info('msg', tag: 'http')` works on
+both without code changes.
 
 Scoped loggers also prefix timer labels: `_log.time('query')` produces `AuthService/query`.
 

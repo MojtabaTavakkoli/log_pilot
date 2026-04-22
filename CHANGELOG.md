@@ -1,28 +1,31 @@
-## 1.1.0-beta.1
+## 1.1.0
 
-Beta release focused on documentation quality and agent setup reliability.
+### Improved: Mobile Auto-Discovery Messaging
 
-### Docs: README Overhaul
+- On **Android/iOS**, the VM service URI writer now detects the mobile
+  platform and prints a clear, actionable message instead of attempting
+  filesystem strategies that cannot succeed (cwd=`/`, no host access).
+  The message directs users to `--project-root` or the new
+  `log_pilot_mcp write-uri` command.
 
-- **Eliminated triple-duplication** of MCP setup instructions. The human-facing
-  "MCP Server" section now links to `log_pilot_mcp` README for IDE-specific
-  configs, troubleshooting, and tool reference instead of repeating them.
-- **Removed orphaned "Claude Code / Terminal Usage" section** that added no
-  information beyond what the IDE dropdowns already covered.
-- **Collapsed "Crash Reporter Integration" section** into cross-references to
-  Quick Start Options A and C, removing ~30 lines of duplicated Firebase code.
-- **Simplified `init()` vs `configure()` comparison table** — removed the
-  "No init" column (already covered by Option D) and added a concise note.
-- **Rewrote agent MCP setup (step 3)** from a 90-line decision tree with 4 JSON
-  examples into a compact algorithm: detect OS, pick command, add only needed
-  flags, two examples.
-- **Agent step 2** now tells the agent to run `flutter run` itself instead of
-  deferring to the developer.
-- **Agent step 4** simplified from a canned message template to a concise
-  instruction.
-- **Condensed Auto-Discovery section** — removed bullet-list internals and
-  Flutter Web helper script prose, linked to `log_pilot_mcp` docs instead.
-- **Net reduction: ~425 lines** (1742 → 1317) with no information loss.
+### Improved: `LogPilotLogger` API Consistency
+
+- All `LogPilotLogger` instance methods (`log`, `verbose`, `debug`, `info`,
+  `warning`, `error`, `fatal`, `json`) now accept an optional `tag:` override
+  parameter. When omitted the instance tag is used (no behavior change);
+  when provided it replaces the instance tag for that single call. This makes
+  the static (`LogPilot.info`) and instance (`_log.info`) APIs fully
+  compatible — code migrating between the two no longer needs to add or
+  remove the `tag:` parameter.
+
+### Docs
+
+- **Auto-Discovery** section now documents the Android/iOS limitation and
+  the `write-uri` command as the recommended workaround.
+- **Scoped Instance Loggers** section now documents the `tag:` override.
+- **Troubleshooting** table updated with Android/iOS row and `write-uri`
+  guidance.
+- **For AI Agents** section updated with Android/iOS auto-discovery note.
 
 ---
 
