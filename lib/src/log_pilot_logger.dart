@@ -3,8 +3,12 @@ import 'package:log_pilot/src/log_pilot.dart';
 
 /// A scoped logger instance that auto-applies a [tag] to every log.
 ///
-/// Use this for class-level or feature-level loggers instead of
-/// repeating the `tag:` parameter on every call:
+/// The [tag] is set once at construction time and forwarded on every call.
+/// All logging methods also accept an optional `tag:` override — when
+/// provided it replaces the instance tag for that single call. This makes
+/// migrating from the `LogPilot` static API seamless: code like
+/// `LogPilot.info('msg', tag: 'http')` compiles on both the static and
+/// instance API without modification.
 ///
 /// ```dart
 /// class AuthService {
@@ -29,79 +33,109 @@ class LogPilotLogger {
   final String tag;
 
   /// Log at an arbitrary [level].
+  ///
+  /// The instance [tag] is used unless overridden by [tag].
   void log(
     LogLevel level,
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(level, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log at [LogLevel.verbose].
   void verbose(
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(LogLevel.verbose, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log at [LogLevel.debug].
   void debug(
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(LogLevel.debug, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log at [LogLevel.info].
   void info(
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(LogLevel.info, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log at [LogLevel.warning].
   void warning(
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(LogLevel.warning, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log at [LogLevel.error].
   void error(
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(LogLevel.error, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log at [LogLevel.fatal].
   void fatal(
     Object message, {
+    String? tag,
     Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? metadata,
   }) =>
       LogPilot.log(LogLevel.fatal, message,
-          tag: tag, error: error, stackTrace: stackTrace, metadata: metadata);
+          tag: tag ?? this.tag,
+          error: error,
+          stackTrace: stackTrace,
+          metadata: metadata);
 
   /// Log a JSON string with automatic pretty-printing.
-  void json(String raw, {LogLevel level = LogLevel.debug}) =>
-      LogPilot.json(raw, level: level, tag: tag);
+  void json(String raw, {LogLevel level = LogLevel.debug, String? tag}) =>
+      LogPilot.json(raw, level: level, tag: tag ?? this.tag);
 
   /// Start a named timer. The [label] is prefixed with this logger's
   /// [tag] to avoid collisions across loggers.

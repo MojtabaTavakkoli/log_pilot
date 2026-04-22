@@ -1,3 +1,34 @@
+## 1.1.0
+
+### Improved: Mobile Auto-Discovery Messaging
+
+- On **Android/iOS**, the VM service URI writer now detects the mobile
+  platform and prints a clear, actionable message instead of attempting
+  filesystem strategies that cannot succeed (cwd=`/`, no host access).
+  The message directs users to `--project-root` or the new
+  `log_pilot_mcp write-uri` command.
+
+### Improved: `LogPilotLogger` API Consistency
+
+- All `LogPilotLogger` instance methods (`log`, `verbose`, `debug`, `info`,
+  `warning`, `error`, `fatal`, `json`) now accept an optional `tag:` override
+  parameter. When omitted the instance tag is used (no behavior change);
+  when provided it replaces the instance tag for that single call. This makes
+  the static (`LogPilot.info`) and instance (`_log.info`) APIs fully
+  compatible — code migrating between the two no longer needs to add or
+  remove the `tag:` parameter.
+
+### Docs
+
+- **Auto-Discovery** section now documents the Android/iOS limitation and
+  the `write-uri` command as the recommended workaround.
+- **Scoped Instance Loggers** section now documents the `tag:` override.
+- **Troubleshooting** table updated with Android/iOS row and `write-uri`
+  guidance.
+- **For AI Agents** section updated with Android/iOS auto-discovery note.
+
+---
+
 ## 1.0.0
 
 First stable release graduation.

@@ -2,7 +2,7 @@ name: log_pilot
 description: >-
   Flutter logging with MCP server for AI agents. DevTools extension,
   structured output, sinks, breadcrumbs, and LLM export.
-version: 1.0.0
+version: 1.1.0
 homepage: https://github.com/MojtabaTavakkoli/log_pilot
 repository: https://github.com/MojtabaTavakkoli/log_pilot
 issue_tracker: https://github.com/MojtabaTavakkoli/log_pilot/issues

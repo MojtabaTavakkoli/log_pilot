@@ -122,6 +122,9 @@ developer — you must ask them and wait.**
 2. **Ensure the Flutter app is running in debug mode.** Auto-discovery
    requires the app to be running so it can write the VM service URI.
    If the app is not running, ask the developer to run `flutter run` first.
+   On **Android/iOS**, auto-discovery from the device is not possible —
+   use `--project-root` in the MCP config or ask the developer to run
+   `log_pilot_mcp write-uri <ws://...>` from the host machine.
 
 3. **Add the LogPilot MCP server to the IDE's MCP configuration.**
 
@@ -347,7 +350,17 @@ mode. The MCP server:
 - On full restart: URI changes, file updates, server detects the change and
   reconnects within the watch interval
 
-**No manual URI copying is needed** in the normal native workflow.
+**No manual URI copying is needed** in the normal desktop workflow.
+
+**Android / iOS:** The app runs on a device and cannot write to the host's
+`.dart_tool` directory. Use one of these approaches on the host machine:
+
+1. **`write-uri` command** — copy the `ws://...` URI from the debug console
+   and run: `log_pilot_mcp write-uri ws://127.0.0.1:PORT/TOKEN=/ws`
+   (add `--project-root=<APP_PATH>` if needed). The MCP server's file
+   watcher detects the change and reconnects automatically.
+2. **`--project-root`** — add `--project-root=<ABSOLUTE_PATH_TO_YOUR_APP>`
+   to the MCP server args so it knows where to watch for the URI file.
 
 <a id="flutter-web-mcp"></a>
 **Flutter Web:** Auto-discovery does not work on web (no `dart:io`). You
@@ -361,7 +374,7 @@ capture by parsing `flutter run` output. **Note:** these scripts depend
 on the exact format of Flutter's console output and may need adjustment
 across Flutter SDK versions.
 
-**If auto-discovery fails on native** (e.g., `.dart_tool` is not in the
+**If auto-discovery fails on desktop** (e.g., `.dart_tool` is not in the
 expected location, or the app's working directory differs from the project
 root on Windows), you have two fallback options:
 
@@ -416,7 +429,7 @@ Or use the `LOG_PILOT_VM_SERVICE_URI` environment variable.
 | Server not appearing in MCP settings | Reload your IDE window after creating/editing the MCP config file. |
 | `Could not find package "log_pilot_mcp"` | Run `dart pub add --dev log_pilot_mcp` in your app's directory first. |
 | `Failed to connect to VM service` | App isn't running in debug mode, or the URI is stale. Start the app first. |
-| Auto-discovery file not created | On Windows, the app's working directory may not match the project root. Pass `--project-root=<APP_PATH>` or use `--vm-service-uri` manually. |
+| Auto-discovery file not created | On Windows, the app's working directory may not match the project root. On Android/iOS, the device can't write to the host. Pass `--project-root=<APP_PATH>`, use `log_pilot_mcp write-uri <ws://...>`, or `--vm-service-uri` manually. |
 | Tools fail after hot restart | Auto-recovers on the next call. If it persists, the VM port changed (full restart) — the URI file watcher handles this. |
 | Server connects but tools return errors | The app must `import 'package:log_pilot/log_pilot.dart'` so the library is loaded. |
 
@@ -640,6 +653,11 @@ class AuthService {
   }
 }
 ```
+
+All instance methods accept an optional `tag:` override — when provided it
+replaces the instance tag for that single call. This makes the static and
+instance APIs fully compatible: `_log.info('msg', tag: 'http')` works on
+both without code changes.
 
 Scoped loggers also prefix timer labels: `_log.time('query')` produces `AuthService/query`.
 

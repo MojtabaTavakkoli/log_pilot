@@ -3,6 +3,11 @@ import 'dart:io' as io;
 
 import 'package:flutter/foundation.dart';
 
+/// Whether the current platform is a mobile device (Android/iOS) where the
+/// app runs on a separate device and cannot write to the host's `.dart_tool`.
+bool get _isMobilePlatform =>
+    io.Platform.isAndroid || io.Platform.isIOS;
+
 /// Writes the VM service WebSocket URI to `.dart_tool/log_pilot_vm_service_uri`
 /// so `log_pilot_mcp` can auto-discover it.
 ///
@@ -14,10 +19,25 @@ import 'package:flutter/foundation.dart';
 ///    Windows).
 /// 3. The directory of `Platform.resolvedExecutable` and its parents.
 ///
+/// On mobile platforms (Android/iOS), `.dart_tool` lives on the developer's
+/// host machine which is unreachable from the device. Auto-discovery is
+/// skipped silently; use `--project-root` or the `write-uri` command on the
+/// MCP server instead.
+///
 /// Only runs in debug mode. Failures are logged to stderr but never crash
 /// the app.
 Future<void> writeVmServiceUri() async {
   if (!kDebugMode) return;
+
+  if (_isMobilePlatform) {
+    debugPrint(
+      '[LogPilot] Running on ${io.Platform.operatingSystem} — '
+      'auto-discovery file not written (host filesystem unreachable). '
+      'Use --project-root on the MCP server, or run: '
+      'log_pilot_mcp write-uri <ws://...>',
+    );
+    return;
+  }
 
   try {
     final info = await developer.Service.getInfo();
